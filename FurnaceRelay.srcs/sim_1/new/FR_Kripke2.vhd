@@ -98,8 +98,9 @@ architecture Behavioral of FR_Kripke2 is
     constant CalculateEdge: std_logic_vector(3 downto 0) := x"7";
     constant Error: std_logic_vector(3 downto 0) := x"8";
     signal stateTracker: std_logic_vector(3 downto 0) := Initialisation;
-    
+    signal lastIndexSaved: natural := 0;
     signal snapshotTracker: integer range 0 to 1611 := 0;
+    signal skippedJobsSaved: natural := 0;
     
 
     component FurnaceRelay is
@@ -182,6 +183,7 @@ if rising_edge(clk) then
                 skippedJobs := 0;
                 for i in 0 to 1611 loop
                     if allJobs(i).observed then
+                        lastIndex := i;
                         case allJobs(i).currentState is
                             when STATE_Initial =>
                                 s_loop: for s in 0 to 1 loop
@@ -204,7 +206,6 @@ if rising_edge(clk) then
                                         hasError := true;
                                     end if;
                                 end loop s_loop;
-                                lastIndex := i;
                             when STATE_FROff =>
                                 s_loop2: for s in 0 to 1457 loop
                                     if frOffReadSnapshots(s).observed and frOffReadSnapshots(s).demand = allJobs(i).demand and frOffReadSnapshots(s).heat = allJobs(i).heat and (frOffReadSnapshots(s).executeOnEntry = (allJobs(i).currentState /= allJobs(i).previousRinglet)) then
@@ -228,7 +229,6 @@ if rising_edge(clk) then
                                         hasError := true;
                                     end if;
                                 end loop s_loop2;
-                                lastIndex := i;
                             when STATE_FROn =>
                                 s_loop3: for s in 0 to 161 loop
                                     if frOnReadSnapshots(s).observed and frOnReadSnapshots(s).demand = allJobs(i).demand and (frOnReadSnapshots(s).executeOnEntry = (allJobs(i).currentState /= allJobs(i).previousRinglet)) then
@@ -251,13 +251,9 @@ if rising_edge(clk) then
                                         hasError := true;
                                     end if;
                                 end loop s_loop3;
-                                lastIndex := i;
                             when others =>
                                 null;
                         end case;
-                        exit;
-                    else
-                        allJobs(i - lastIndex) <= allJobs(i);
                         allJobs(i).observed <= false;
                     end if;
                 end loop;
@@ -270,6 +266,8 @@ if rising_edge(clk) then
                     stateTracker <= ExecuteReadSnapshot;
                 end if;
             end if;
+            lastIndexSaved <= lastIndex;
+            skippedJobsSaved <= skippedJobs;
         when ExecuteReadSnapshot =>
             if currentJobs(0).observed = false then
                 reset <= '0';
