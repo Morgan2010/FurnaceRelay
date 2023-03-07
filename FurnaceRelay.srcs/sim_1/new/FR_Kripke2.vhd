@@ -238,6 +238,12 @@ if rising_edge(clk) then
         when FilterJobs =>
             reset <= '0';
             setInternalSignals <= '0';
+            if allJobs(0).observed then
+                currentJobs(0) <= allJobs(0);
+                currentJobIndex := 1;
+            else
+                currentJobIndex := 0;
+            end if;
             for i in 1 to 1611 loop
                 if allJobs(i).observed then
                     sim_loop: for c in 0 to i - 1 loop
@@ -254,7 +260,7 @@ if rising_edge(clk) then
                                         exit sim_loop;
                                     end if;
                             end case;
-                        elsif c = i - 1 and allJobs(c).observed = false then
+                        elsif c = i - 1 then
                             currentJobs(currentJobIndex) <= allJobs(i);
                             currentJobIndex := currentJobIndex + 1;
                         end if;
