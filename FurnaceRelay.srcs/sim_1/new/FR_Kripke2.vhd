@@ -545,7 +545,7 @@ if rising_edge(clk) then
                                                         fr_heat => writeSnapshotJobs(snapshotTracker).fr_heat,
                                                         currentState => writeSnapshotJobs(snapshotTracker).currentStateOut,
                                                         previousRinglet => writeSnapshotJobs(snapshotTracker).currentState,
-                                                        internalState => ReadSnapshot,
+                                                        internalState => writeSnapshotJobs(snapshotTracker).internalState,
                                                         currentStateOut => writeSnapshotJobs(snapshotTracker).currentStateOut,
                                                         executeOnEntry => writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut,
                                                         observed => true
@@ -573,11 +573,11 @@ if rising_edge(clk) then
                                                                     demand => (stdLogicTypes(i0) & stdLogicTypes(i1)),
                                                                     heat => stdLogicTypes(i2),
                                                                     relayOn => writeSnapshotJobs(snapshotTracker).relayOn,
-                                                                    fr_demand => (stdLogicTypes(i0) & stdLogicTypes(i1)),
-                                                                    fr_heat => stdLogicTypes(i2),
+                                                                    fr_demand => writeSnapshotJobs(snapshotTracker).fr_demand,
+                                                                    fr_heat => writeSnapshotJobs(snapshotTracker).fr_heat,
                                                                     currentState => writeSnapshotJobs(snapshotTracker).currentStateOut,
                                                                     previousRinglet => writeSnapshotJobs(snapshotTracker).currentState,
-                                                                    internalState => ReadSnapshot,
+                                                                    internalState => writeSnapshotJobs(snapshotTracker).internalState,
                                                                     currentStateOut => writeSnapshotJobs(snapshotTracker).currentStateOut,
                                                                     executeOnEntry => writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut,
                                                                     observed => true

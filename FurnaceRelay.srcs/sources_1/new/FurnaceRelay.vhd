@@ -43,88 +43,89 @@ architecture Behavioral of FurnaceRelay is
     signal RelayOn: std_logic;
 begin
 
-    FurnaceRelay_currentStateOut <= currentState;
-    FurnaceRelay_previousRingletOut <= previousRinglet;
-    FurnaceRelay_internalStateOut <= internalState;
-    FurnaceRelay_demand <= demand;
-    FurnaceRelay_heat <= heat;
-
     process(clk)
     begin
-        if (rising_edge(clk) and reset = '1') then
-            case internalState is
-                when CheckTransition =>
-                    case currentState is
-                        when STATE_Initial =>
-                            targetState <= STATE_FROff;
-                            internalState <= OnExit;
-                        when STATE_FROff =>
-                            if (demand = "10" and Heat = '1') then
-                                targetState <= STATE_FROn;
-                                internalState <= OnExit;
-                            else
-                                internalState <= Internal;
-                            end if;
-                        when STATE_FROn =>
-                            if (demand = "01") then
+        if (rising_edge(clk)) then
+            if reset = '1' then
+                FurnaceRelay_currentStateOut <= currentState;
+                FurnaceRelay_previousRingletOut <= previousRinglet;
+                FurnaceRelay_internalStateOut <= internalState;
+                FurnaceRelay_demand <= demand;
+                FurnaceRelay_heat <= heat;
+                case internalState is
+                    when CheckTransition =>
+                        case currentState is
+                            when STATE_Initial =>
                                 targetState <= STATE_FROff;
                                 internalState <= OnExit;
-                            else
+                            when STATE_FROff =>
+                                if (demand = "10" and Heat = '1') then
+                                    targetState <= STATE_FROn;
+                                    internalState <= OnExit;
+                                else
+                                    internalState <= Internal;
+                                end if;
+                            when STATE_FROn =>
+                                if (demand = "01") then
+                                    targetState <= STATE_FROff;
+                                    internalState <= OnExit;
+                                else
+                                    internalState <= Internal;
+                                end if;
+                            when others =>
                                 internalState <= Internal;
-                            end if;
-                        when others =>
-                            internalState <= Internal;
-                    end case;
-                when Internal =>
-                    internalState <= WriteSnapshot;
-                when NoOnEntry =>
-                    internalState <= CheckTransition;
-                when OnEntry =>
-                    case currentState is
-                        when STATE_FROff =>
-                            RelayOn <= '0';
-                        when STATE_FROn =>
-                            RelayOn <= '1';
-                        when others =>
-                            null;
-                    end case;
-                    internalState <= CheckTransition;
-                when OnExit =>
-                    internalState <= WriteSnapshot;
-                when ReadSnapshot =>
-                    case currentState is
-                        when STATE_FROff =>
-                            demand <= EXTERNAL_demand;
-                            Heat <= EXTERNAL_Heat;
-                        when STATE_FROn =>
-                            demand <= EXTERNAL_demand;
-                        when others =>
-                            null;
-                    end case;
-                    if (previousRinglet /= currentState) then
-                        internalState <= OnEntry;
-                    else
-                        internalState <= NoOnEntry;
-                    end if;
-                when WriteSnapshot =>
-                    case currentState is
-                        when STATE_FROff =>
-                            EXTERNAL_RelayOn <= RelayOn;
-                        when STATE_FROn =>
-                            EXTERNAL_RelayOn <= RelayOn;
-                        when others =>
-                            null;
-                    end case;
-                    internalState <= ReadSnapshot;
-                    previousRinglet <= currentState;
-                    currentState <= targetState;
-                when others =>
-                    null;
-            end case;
-        elsif (rising_edge(clk) and reset = '0') then
-            currentState <= FurnaceRelay_currentStateIn;
-            previousRinglet <= FurnaceRelay_previousRingletIn;
-            internalState <= FurnaceRelay_internalStateIn;
+                        end case;
+                    when Internal =>
+                        internalState <= WriteSnapshot;
+                    when NoOnEntry =>
+                        internalState <= CheckTransition;
+                    when OnEntry =>
+                        case currentState is
+                            when STATE_FROff =>
+                                RelayOn <= '0';
+                            when STATE_FROn =>
+                                RelayOn <= '1';
+                            when others =>
+                                null;
+                        end case;
+                        internalState <= CheckTransition;
+                    when OnExit =>
+                        internalState <= WriteSnapshot;
+                    when ReadSnapshot =>
+                        case currentState is
+                            when STATE_FROff =>
+                                demand <= EXTERNAL_demand;
+                                Heat <= EXTERNAL_Heat;
+                            when STATE_FROn =>
+                                demand <= EXTERNAL_demand;
+                            when others =>
+                                null;
+                        end case;
+                        if (previousRinglet /= currentState) then
+                            internalState <= OnEntry;
+                        else
+                            internalState <= NoOnEntry;
+                        end if;
+                    when WriteSnapshot =>
+                        case currentState is
+                            when STATE_FROff =>
+                                EXTERNAL_RelayOn <= RelayOn;
+                            when STATE_FROn =>
+                                EXTERNAL_RelayOn <= RelayOn;
+                            when others =>
+                                null;
+                        end case;
+                        internalState <= ReadSnapshot;
+                        previousRinglet <= currentState;
+                        currentState <= targetState;
+                    when others =>
+                        null;
+                end case;
+            else
+                currentState <= FurnaceRelay_currentStateIn;
+                previousRinglet <= FurnaceRelay_previousRingletIn;
+                internalState <= FurnaceRelay_internalStateIn;
+            end if;
         end if;
     end process;
 end Behavioral;
