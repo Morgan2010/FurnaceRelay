@@ -44,15 +44,16 @@ architecture Behavioral of FurnaceRelay is
     signal RelayOn: std_logic;
 begin
 
+    FurnaceRelay_currentStateOut <= currentState;
+    FurnaceRelay_previousRingletOut <= previousRinglet;
+    FurnaceRelay_internalStateOut <= internalState;
+    FurnaceRelay_demand <= demand;
+    FurnaceRelay_heat <= heat;
+
     process(clk)
     begin
         if (rising_edge(clk)) then
             if reset = '1' then
-                FurnaceRelay_currentStateOut <= currentState;
-                FurnaceRelay_previousRingletOut <= previousRinglet;
-                FurnaceRelay_internalStateOut <= internalState;
-                FurnaceRelay_demand <= demand;
-                FurnaceRelay_heat <= heat;
                 case internalState is
                     when CheckTransition =>
                         case currentState is
