@@ -124,6 +124,7 @@ package FR_Kripke2_Types is
         currentState: std_logic_vector(1 downto 0);
         previousRinglet: std_logic_vector(1 downto 0);
         internalState: std_logic_vector(2 downto 0);
+        currentStateOut: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
         observed: boolean;
     end record TotalSnapshot_t;

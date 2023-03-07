@@ -52,6 +52,7 @@ architecture Behavioral of FR_Kripke2 is
             currentState => STATE_Initial,
             previousRinglet => "ZZ",
             internalState => ReadSnapshot,
+            currentStateOut => STATE_Initial,
             executeOnEntry => true,
             observed => false
         )
@@ -66,6 +67,7 @@ architecture Behavioral of FR_Kripke2 is
             currentState => STATE_Initial,
             previousRinglet => "ZZ",
             internalState => ReadSnapshot,
+            currentStateOut => STATE_Initial,
             executeOnEntry => true,
             observed => false
         )
@@ -98,6 +100,7 @@ architecture Behavioral of FR_Kripke2 is
     constant CalculateEdge: std_logic_vector(3 downto 0) := x"7";
     constant Error: std_logic_vector(3 downto 0) := x"8";
     constant FilterJobs: std_logic_vector(3 downto 0) := x"9";
+    constant FilterWriteSnapshots: std_logic_vector(3 downto 0) := x"A";
     signal stateTracker: std_logic_vector(3 downto 0) := Initialisation;
     signal lastIndexSaved: natural := 0;
     signal snapshotTracker: integer range 0 to 1611 := 0;
@@ -135,6 +138,7 @@ begin
             FurnaceRelay_currentStateIn => currentJobs(i).currentState,
             FurnaceRelay_previousRingletIn => currentJobs(i).previousRinglet,
             FurnaceRelay_internalStateIn => currentJobs(i).internalState,
+            FurnaceRelay_currentStateOut => currentJobs(i).currentStateOut,
             FurnaceRelay_internalStateOut => internalState,
             reset => reset
         );
@@ -164,6 +168,7 @@ if rising_edge(clk) then
                             currentState => STATE_Initial,
                             previousRinglet => "ZZ",
                             internalState => ReadSnapshot,
+                            currentStateOut => STATE_Initial,
                             executeOnEntry => true,
                             observed => true
                         );
@@ -368,6 +373,7 @@ if rising_edge(clk) then
                                 elsif initialWriteSnapshots(w).observed = false then
                                     initialWriteSnapshots(w) <= (executeOnEntry => currentJobs(i).executeOnentry, observed => true);
                                     writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
+                                    exit;
                                 elsif w = 1 and initialWriteSnapshots(w).observed = true then
                                     hasError := true;
                                 end if;
@@ -407,6 +413,7 @@ if rising_edge(clk) then
                                         observed => true
                                     );
                                     writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
+                                    exit;
                                 elsif w = 1457 and frOffWriteSnapshots(w).observed = true then
                                     hasError := true;
                                 end if;
@@ -438,6 +445,7 @@ if rising_edge(clk) then
                                 elsif frOnWriteSnapshots(w).observed = false then
                                     frOnWriteSnapshots(w) <= (demand => currentJobs(i).fr_demand, relayOn => currentJobs(i).relayOn, executeOnEntry => currentJobs(i).executeOnEntry, observed => true);
                                     writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
+                                    exit;
                                 elsif w = 161 and frOnWriteSnapshots(w).observed = true then
                                     hasError := true;
                                 end if;
@@ -449,91 +457,168 @@ if rising_edge(clk) then
                 if hasError then
                     stateTracker <= Error;
                 else
-                    stateTracker <= CalculateEdgeSetup;
+                    stateTracker <= FilterWriteSnapshots;
                 end if;
             end if;
-        when CalculateEdgeSetup =>
-            if writeSnapshotJobs(0).observed = false then
-                stateTracker <= GenerateWorkingJob;
-            else
-                snapshotTracker <= 0;
-                stateTracker <= SetWriteSnapshotJobs;
-                skippedJobs := 0;
-            end if;
-        when SetWriteSnapshotJobs =>
-            if writeSnapshotJobs(snapshotTracker).observed = false then
-                stateTracker <= GenerateWorkingJob;
-                snapshotTracker <= 0;
-            else
-                snapshotTracker <= snapshotTracker + 1;
-                case writeSnapshotJobs(snapshotTracker).previousRinglet is
-                    when STATE_Initial =>
-                        for s in 0 to 1 loop
-                            if initialWriteSnapshots(s).observed = true and initialWriteSnapshots(s).executeOnEntry = writeSnapshotJobs(snapshotTracker).executeOnEntry then
-                                skippedJobs := skippedJobs + 729;
-                                exit;
-                            elsif initialWriteSnapshots(s).observed = false then
-                                initialWriteSnapshots(s) <= (
-                                    executeOnEntry => writeSnapshotJobs(snapshotTracker).executeOnEntry,
-                                    observed => true
-                                );
-                                for e in 0 to 1 loop
-                                    if initialEdges(e).observed = false then
-                                        initialEdges(e) <= (
-                                            write => (
-                                                executeOnEntry => writeSnapshotJobs(snapshotTracker).executeOnEntry,
-                                                observed => true
-                                            ),
-                                            nextState => writeSnapshotJobs(snapshotTracker).currentState,
-                                            observed => true
-                                        );
+        when FilterWriteSnapshots =>
+            for i in 1 to 1611 loop
+                if writeSnapshotJobs(i).observed then
+                    for j in 0 to i - 1 loop
+                        if writeSnapshotJobs(j).observed then
+                            case writeSnapshotJobs(i).currentState is
+                                when STATE_Initial =>
+                                    if writeSnapshotJobs(j).executeOnEntry = writeSnapshotJobs(i).executeOnEntry then
+                                        writeSnapshotJobs(i).observed <= false;
                                         exit;
-                                    elsif e = 1 and initialEdges(e).observed = true then
-                                        hasError := true;
                                     end if;
-                                end loop;
-                                case writeSnapshotJobs(snapshotTracker).currentState is
-                                    when STATE_Initial =>
-                                        for s in 0 to 1 loop
-                                            if initialReadSnapshots(s).observed = true and initialReadSnapshots(s).executeOnEntry = (writeSnapshotJobs(snapshotTracker).previousRinglet /= writeSnapshotJobs(snapshotTracker).currentState) then
-                                                skippedJobs := skippedJobs + 1;
-                                                exit;
-                                            else
-                                                for j in 0 to 1611 loop
-                                                    if allJobs(j).observed = true and allJobs(j).executeOnEntry = (writeSnapshotJobs(snapshotTracker).previousRinglet /= writeSnapshotJobs(snapshotTracker).currentState) then
-                                                        skippedJobs := skippedJobs + 1;
+                                when STATE_FROff =>
+                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(j).heat = writeSnapshotJobs(i).heat and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
+                                        writeSnapshotJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                                when STATE_FROn =>
+                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
+                                        writeSnapshotJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                            end case;
+                        end if;
+                    end loop;
+                end if;
+            end loop;
+            stateTracker <= CalculateEdgeSetup;
+        when CalculateEdgeSetup =>
+            for k in 0 to 1611 loop
+                if writeSnapshotJobs(k).observed then
+                    snapshotTracker <= k;
+                    stateTracker <= SetWriteSnapshotJobs;
+                    skippedJobs := 0;
+                    exit;
+                elsif k = 1611 then
+                    stateTracker <= GenerateWorkingJob;
+                end if;
+            end loop;
+        when SetWriteSnapshotJobs =>
+            case writeSnapshotJobs(snapshotTracker).currentState is
+                when STATE_Initial =>
+                    for s in 0 to 1 loop
+                        if initialWriteSnapshots(s).observed = true and initialWriteSnapshots(s).executeOnEntry = writeSnapshotJobs(snapshotTracker).executeOnEntry then
+                            skippedJobs := skippedJobs + 729;
+                            exit;
+                        elsif initialWriteSnapshots(s).observed = false then
+                            initialWriteSnapshots(s) <= (
+                                executeOnEntry => writeSnapshotJobs(snapshotTracker).executeOnEntry,
+                                observed => true
+                            );
+                            for e in 0 to 1 loop
+                                if initialEdges(e).observed = false then
+                                    initialEdges(e) <= (
+                                        write => (
+                                            executeOnEntry => writeSnapshotJobs(snapshotTracker).executeOnEntry,
+                                            observed => true
+                                        ),
+                                        nextState => writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                        observed => true
+                                    );
+                                    exit;
+                                elsif e = 1 and initialEdges(e).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                            case writeSnapshotJobs(snapshotTracker).currentStateOut is
+                                when STATE_Initial =>
+                                    for s in 0 to 1 loop
+                                        if initialReadSnapshots(s).observed = true and initialReadSnapshots(s).executeOnEntry = (writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut) then
+                                            skippedJobs := skippedJobs + 1;
+                                            exit;
+                                        elsif initialReadSnapshots(s).observed = false then
+                                            for j in 0 to 1611 loop
+                                                if allJobs(j).observed = true and allJobs(j).executeOnEntry = (writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut) then
+                                                    skippedJobs := skippedJobs + 1;
+                                                    exit;
+                                                elsif allJobs(j).observed = false then
+                                                    allJobs(j) <= (
+                                                        demand => writeSnapshotJobs(snapshotTracker).fr_demand,
+                                                        heat => writeSnapshotJobs(snapshotTracker).fr_heat,
+                                                        relayOn => writeSnapshotJobs(snapshotTracker).relayOn,
+                                                        fr_demand => writeSnapshotJobs(snapshotTracker).fr_demand,
+                                                        fr_heat => writeSnapshotJobs(snapshotTracker).fr_heat,
+                                                        currentState => writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                                        previousRinglet => writeSnapshotJobs(snapshotTracker).currentState,
+                                                        internalState => ReadSnapshot,
+                                                        currentStateOut => writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                                        executeOnEntry => writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                                        observed => true
+                                                    );
+                                                    exit;
+                                                elsif j = 1611 and allJobs(j).observed = true then
+                                                    hasError := true;
+                                                end if;
+                                            end loop;
+                                        elsif initialReadSnapshots(s).observed = true and s = 1 then
+                                            hasError := true;
+                                        end if;
+                                    end loop;
+                                when STATE_FROff =>
+                                    for i0 in 0 to 8 loop
+                                        for i1 in 0 to 8 loop
+                                            for i2 in 0 to 8 loop
+                                                for s in 0 to 1457 loop
+                                                    if frOffReadSnapshots(s).observed and frOffReadSnapshots(s).demand = (stdLogicTypes(i0) & stdLogicTypes(i1)) and frOffReadSnapshots(s).heat = stdLogicTypes(i2) and frOffReadSnapshots(s).executeOnEntry = (writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut) then
                                                         exit;
-                                                    elsif allJobs(j).observed = false then
-                                                        allJobs(j) <= (
-                                                            demand => writeSnapshotJobs(snapshotTracker).demand,
-                                                            heat => writeSnapshotJobs(snapshotTracker).heat,
-                                                            relayOn => writeSnapshotJobs(snapshotTracker).relayOn,
-                                                            fr_demand => writeSnapshotJobs(snapshotTracker).demand,
-                                                            fr_heat => writeSnapshotJobs(snapshotTracker).heat,
-                                                            currentState => writeSnapshotJobs(snapshotTracker).currentState,
-                                                            previousRinglet => writeSnapshotJobs(snapshotTracker).previousRinglet,
-                                                            internalState => writeSnapshotJobs(snapshotTracker).internalState,
-                                                            executeOnEntry => writeSnapshotJobs(snapshotTracker).previousRinglet /= writeSnapshotJobs(snapshotTracker).currentState,
-                                                            observed => true
-                                                        );
-                                                        exit;
-                                                    elsif j = 1611 and allJobs(j).observed = true then
+                                                    elsif frOffReadSnapshots(s).observed = false then
+                                                        for jobIndex in 0 to 1611 loop
+                                                            if allJobs(jobIndex).observed = false then
+                                                                allJobs(jobIndex) <= (
+                                                                    demand => (stdLogicTypes(i0) & stdLogicTypes(i1)),
+                                                                    heat => stdLogicTypes(i2),
+                                                                    relayOn => writeSnapshotJobs(snapshotTracker).relayOn,
+                                                                    fr_demand => (stdLogicTypes(i0) & stdLogicTypes(i1)),
+                                                                    fr_heat => stdLogicTypes(i2),
+                                                                    currentState => writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                                                    previousRinglet => writeSnapshotJobs(snapshotTracker).currentState,
+                                                                    internalState => ReadSnapshot,
+                                                                    currentStateOut => writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                                                    executeOnEntry => writeSnapshotJobs(snapshotTracker).currentState /= writeSnapshotJobs(snapshotTracker).currentStateOut,
+                                                                    observed => true
+                                                                );
+                                                            elsif allJobs(jobIndex).observed and jobIndex = 1611 then
+                                                                hasError := true;
+                                                            end if;
+                                                        end loop;
+                                                    elsif frOffReadSnapshots(s).observed = true and s = 1457 then
                                                         hasError := true;
                                                     end if;
                                                 end loop;
-                                            end if;
+                                            end loop;
                                         end loop;
-                                    when others =>
-                                        null;
-                                end case;
-                                exit;
-                            elsif s = 1 and initialWriteSnapshots(s).observed = true then
-                                stateTracker <= Error;
-                            end if;
-                        end loop;
-                    when others =>
-                        null;
-                end case;
+                                    end loop;
+                                when others =>
+                                    null;
+                            end case;
+                            exit;
+                        elsif s = 1 and initialWriteSnapshots(s).observed = true then
+                            stateTracker <= Error;
+                        end if;
+                    end loop;
+                when others =>
+                    null;
+            end case;
+            if hasError then
+                stateTracker <= Error;
+            elsif snapshotTracker = 1611 then
+                snapshotTracker <= 0;
+                stateTracker <= GenerateWorkingJob;
+            else
+                for t in snapshotTracker + 1 to 1611 loop
+                    if writeSnapshotJobs(t).observed then
+                        snapshotTracker <= t;
+                        exit;
+                    elsif t = 1611 then
+                        snapshotTracker <= 0;
+                        stateTracker <= GenerateWorkingJob;
+                    end if;
+                end loop;
             end if;
         when others =>
             null;
