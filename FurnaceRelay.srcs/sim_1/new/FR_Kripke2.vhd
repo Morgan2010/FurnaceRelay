@@ -371,6 +371,8 @@ if rising_edge(clk) then
                                         );
                                         initialReadIndex := r;
                                         exit;
+                                    elsif r = 1 then
+                                        hasError := true;
                                     end if;
                                 end loop;
                                 for w in 0 to 1 loop
@@ -407,6 +409,8 @@ if rising_edge(clk) then
                                         );
                                         frOffReadIndex := r;
                                         exit;
+                                    elsif r = 1457 then
+                                        hasError := true;
                                     end if;
                                 end loop;
                                 for w in 0 to 1457 loop
@@ -447,6 +451,8 @@ if rising_edge(clk) then
                                         );
                                         frOnReadIndex := r;
                                         exit;
+                                    elsif r = 161 then
+                                        hasError := true;
                                     end if;
                                 end loop;
                                 for w in 0 to 161 loop
