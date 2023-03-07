@@ -485,33 +485,33 @@ if rising_edge(clk) then
 --                    stateTracker <= FilterWriteSnapshots;
 --                end if;
 --            end if;
---        when FilterWriteSnapshots =>
---            for i in 1 to 1611 loop
---                if writeSnapshotJobs(i).observed then
---                    for j in 0 to i - 1 loop
---                        if writeSnapshotJobs(j).observed then
---                            case writeSnapshotJobs(i).currentState is
---                                when STATE_Initial =>
---                                    if writeSnapshotJobs(j).executeOnEntry = writeSnapshotJobs(i).executeOnEntry then
---                                        writeSnapshotJobs(i).observed <= false;
---                                        exit;
---                                    end if;
---                                when STATE_FROff =>
---                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(j).heat = writeSnapshotJobs(i).heat and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
---                                        writeSnapshotJobs(i).observed <= false;
---                                        exit;
---                                    end if;
---                                when STATE_FROn =>
---                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
---                                        writeSnapshotJobs(i).observed <= false;
---                                        exit;
---                                    end if;
---                            end case;
---                        end if;
---                    end loop;
---                end if;
---            end loop;
---            stateTracker <= CalculateEdgeSetup;
+        when FilterWriteSnapshots =>
+            for i in 1 to 1611 loop
+                if writeSnapshotJobs(i).observed then
+                    for j in 0 to i - 1 loop
+                        if writeSnapshotJobs(j).observed then
+                            case writeSnapshotJobs(i).currentState is
+                                when STATE_Initial =>
+                                    if writeSnapshotJobs(j).executeOnEntry = writeSnapshotJobs(i).executeOnEntry then
+                                        writeSnapshotJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                                when STATE_FROff =>
+                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(j).heat = writeSnapshotJobs(i).heat and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
+                                        writeSnapshotJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                                when STATE_FROn =>
+                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
+                                        writeSnapshotJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                            end case;
+                        end if;
+                    end loop;
+                end if;
+            end loop;
+            stateTracker <= CalculateEdgeSetup;
 --        when CalculateEdgeSetup =>
 --            for k in 0 to 1611 loop
 --                if writeSnapshotJobs(k).observed then
