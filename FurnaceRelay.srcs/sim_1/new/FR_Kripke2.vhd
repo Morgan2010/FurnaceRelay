@@ -41,7 +41,6 @@ end FR_Kripke2;
 
 architecture Behavioral of FR_Kripke2 is
     signal clk: std_logic := '0';
-    signal workingBuffer: DataStore_t;
     signal allJobs: DataStore_t := (
         others => (
             demand => "UU",
