@@ -151,12 +151,12 @@ variable lastIndex: natural := 0;
 variable skippedJobs: natural := 0;
 variable skippedWrites: natural := 0;
 variable hasError: boolean := false;
---variable initialReadIndex: integer range -1 to 1 := -1;
---variable frOffReadIndex: integer range -1 to 1457 := -1;
---variable frOnReadIndex: integer range -1 to 151 := -1;
---variable initialWriteIndex: integer range -1 to 1 := -1;
---variable frOffWriteIndex: integer range -1 to 1457 := -1;
---variable frOnWriteIndex: integer range -1 to 161 := -1;
+variable initialReadIndex: integer range -1 to 1 := -1;
+variable frOffReadIndex: integer range -1 to 1457 := -1;
+variable frOnReadIndex: integer range -1 to 161 := -1;
+variable initialWriteIndex: integer range -1 to 1 := -1;
+variable frOffWriteIndex: integer range -1 to 1457 := -1;
+variable frOnWriteIndex: integer range -1 to 161 := -1;
 begin
 if rising_edge(clk) then
     case stateTracker is
