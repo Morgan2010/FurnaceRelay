@@ -104,6 +104,7 @@ architecture Behavioral of FR_Kripke2 is
     constant RemoveJobs: std_logic_vector(3 downto 0) := x"B";
     signal stateTracker: std_logic_vector(3 downto 0) := Initialisation;
     signal snapshotTracker: integer range 0 to 1611 := 0;
+    signal setInternalSignals: std_logic := '0';
     
 
     component FurnaceRelay is
@@ -120,13 +121,14 @@ architecture Behavioral of FR_Kripke2 is
             FurnaceRelay_currentStateOut: out std_logic_vector(1 downto 0);
             FurnaceRelay_previousRingletOut: out std_logic_vector(1 downto 0);
             FurnaceRelay_internalStateOut: out std_logic_vector(2 downto 0);
+            setInternalSignals: in std_logic;
             reset: in std_logic
         );
     end component;
 
 begin
 
-    fr_gen: for i in 0 to 1457 generate
+    fr_gen: for i in 0 to 1611 generate
         fr_inst: FurnaceRelay port map(
             clk => clk,
             EXTERNAL_demand => currentJobs(i).demand,
@@ -139,6 +141,7 @@ begin
             FurnaceRelay_internalStateIn => currentJobs(i).internalState,
             FurnaceRelay_currentStateOut => currentJobs(i).currentStateOut,
             FurnaceRelay_internalStateOut => internalState,
+            setInternalSignals => setInternalSignals,
             reset => reset
         );
     end generate fr_gen;
@@ -149,115 +152,121 @@ process(clk)
 variable skippedJobs: natural := 0;
 variable skippedWrites: natural := 0;
 variable hasError: boolean := false;
-variable initialReadIndex: integer range -1 to 1 := -1;
-variable frOffReadIndex: integer range -1 to 1457 := -1;
-variable frOnReadIndex: integer range -1 to 161 := -1;
-variable initialWriteIndex: integer range -1 to 1 := -1;
-variable frOffWriteIndex: integer range -1 to 1457 := -1;
-variable frOnWriteIndex: integer range -1 to 161 := -1;
-variable currentJobIndex: integer range 0 to 1611 := 0;
+--variable initialReadIndex: integer range -1 to 1 := -1;
+--variable frOffReadIndex: integer range -1 to 1457 := -1;
+--variable frOnReadIndex: integer range -1 to 161 := -1;
+--variable initialWriteIndex: integer range -1 to 1 := -1;
+--variable frOffWriteIndex: integer range -1 to 1457 := -1;
+--variable frOnWriteIndex: integer range -1 to 161 := -1;
+variable currentJobIndex: integer := -1;
 begin
 if rising_edge(clk) then
     case stateTracker is
-        when Initialisation =>
-            reset <= '0';
-            for i in 0 to 8 loop
-                for j in 0 to 8 loop
-                    for k in 0 to 8 loop
-                        allJobs(i * 81 + j * 9 + k) <= (
-                            demand => (1 => stdLogicTypes(i), 0 => stdLogicTypes(j)),
-                            heat => stdLogicTypes(k),
-                            relayOn => '0',
-                            fr_demand => (1 => stdLogicTypes(i), 0 => stdLogicTypes(j)),
-                            fr_heat => stdLogicTypes(k),
-                            currentState => STATE_Initial,
-                            previousRinglet => "ZZ",
-                            internalState => ReadSnapshot,
-                            currentStateOut => STATE_Initial,
-                            executeOnEntry => true,
-                            observed => true
-                        );
-                    end loop;
-                end loop;
-            end loop;
-            stateTracker <= GenerateWorkingJob;
-        when GenerateWorkingJob =>
-            reset <= '0';
-            if allJobs(0).observed = false and writeSnapshotJobs(0).observed = false then
-                stateTracker <= Finished;
-            elsif allJobs(0).observed = false then
-                stateTracker <= CalculateEdgeSetup;
-            else
-                for i in 0 to 1611 loop
-                    case allJobs(i).currentState is
-                        when STATE_Initial =>
-                            s_loop: for s in 0 to 1 loop
-                                if initialReadSnapshots(s).observed and initialReadSnapshots(s).executeOnEntry = allJobs(i).executeOnEntry then
-                                    allJobs(i).observed <= false;
-                                    exit s_loop;
-                                elsif initialReadSnapshots(s).observed = false then
-                                    exit s_loop;
-                                elsif s = 1 and initialReadSnapshots(s).observed = true then
-                                    hasError := true;
-                                end if;
-                            end loop s_loop;
-                        when STATE_FROff =>
-                            s_loop2: for s in 0 to 1457 loop
-                                if frOffReadSnapshots(s).observed and frOffReadSnapshots(s).demand = allJobs(i).demand and frOffReadSnapshots(s).heat = allJobs(i).heat and frOffReadSnapshots(s).executeOnEntry = allJobs(i).executeOnEntry then
-                                    allJobs(i).observed <= false;
-                                    exit s_loop2;
-                                elsif frOffReadSnapshots(s).observed = false then
-                                    exit s_loop2;
-                                elsif s = 1457 and frOffReadSnapshots(s).observed = true then
-                                    hasError := true;
-                                end if;
-                            end loop s_loop2;
-                        when STATE_FROn =>
-                            s_loop3: for s in 0 to 161 loop
-                                if frOnReadSnapshots(s).observed and frOnReadSnapshots(s).demand = allJobs(i).demand and frOnReadSnapshots(s).executeOnEntry = allJobs(i).executeOnEntry then
-                                    allJobs(i).observed <= false;
-                                    exit s_loop3;
-                                elsif frOnReadSnapshots(s).observed = false then
-                                    exit s_loop3;
-                                elsif s = 161 and frOnReadSnapshots(s).observed = true then
-                                    hasError := true;
-                                end if;
-                            end loop s_loop3;
-                        when others =>
-                            null;
-                    end case;
-                end loop;
-                if hasError then
-                    stateTracker <= Error;
-                else
-                    stateTracker <= FilterJobs;
-                end if;
-            end if;
+--        when Initialisation =>
+--            reset <= '0';
+--            for i in 0 to 8 loop
+--                for j in 0 to 8 loop
+--                    for k in 0 to 8 loop
+--                        allJobs(i * 81 + j * 9 + k) <= (
+--                            demand => (1 => stdLogicTypes(i), 0 => stdLogicTypes(j)),
+--                            heat => stdLogicTypes(k),
+--                            relayOn => '0',
+--                            fr_demand => (1 => stdLogicTypes(i), 0 => stdLogicTypes(j)),
+--                            fr_heat => stdLogicTypes(k),
+--                            currentState => STATE_Initial,
+--                            previousRinglet => "ZZ",
+--                            internalState => ReadSnapshot,
+--                            currentStateOut => STATE_Initial,
+--                            executeOnEntry => true,
+--                            observed => true
+--                        );
+--                    end loop;
+--                end loop;
+--            end loop;
+--            stateTracker <= GenerateWorkingJob;
+--        when GenerateWorkingJob =>
+--            reset <= '0';
+--            if allJobs(0).observed = false and writeSnapshotJobs(0).observed = false then
+--                stateTracker <= Finished;
+--            elsif allJobs(0).observed = false then
+--                stateTracker <= CalculateEdgeSetup;
+--            else
+--                for i in 0 to 1611 loop
+--                    case allJobs(i).currentState is
+--                        when STATE_Initial =>
+--                            s_loop: for s in 0 to 1 loop
+--                                if initialReadSnapshots(s).observed and initialReadSnapshots(s).executeOnEntry = allJobs(i).executeOnEntry then
+--                                    allJobs(i).observed <= false;
+--                                    exit s_loop;
+--                                elsif initialReadSnapshots(s).observed = false then
+--                                    exit s_loop;
+--                                elsif s = 1 and initialReadSnapshots(s).observed = true then
+--                                    hasError := true;
+--                                end if;
+--                            end loop s_loop;
+--                        when STATE_FROff =>
+--                            s_loop2: for s in 0 to 1457 loop
+--                                if frOffReadSnapshots(s).observed and frOffReadSnapshots(s).demand = allJobs(i).demand and frOffReadSnapshots(s).heat = allJobs(i).heat and frOffReadSnapshots(s).executeOnEntry = allJobs(i).executeOnEntry then
+--                                    allJobs(i).observed <= false;
+--                                    exit s_loop2;
+--                                elsif frOffReadSnapshots(s).observed = false then
+--                                    exit s_loop2;
+--                                elsif s = 1457 and frOffReadSnapshots(s).observed = true then
+--                                    hasError := true;
+--                                end if;
+--                            end loop s_loop2;
+--                        when STATE_FROn =>
+--                            s_loop3: for s in 0 to 161 loop
+--                                if frOnReadSnapshots(s).observed and frOnReadSnapshots(s).demand = allJobs(i).demand and frOnReadSnapshots(s).executeOnEntry = allJobs(i).executeOnEntry then
+--                                    allJobs(i).observed <= false;
+--                                    exit s_loop3;
+--                                elsif frOnReadSnapshots(s).observed = false then
+--                                    exit s_loop3;
+--                                elsif s = 161 and frOnReadSnapshots(s).observed = true then
+--                                    hasError := true;
+--                                end if;
+--                            end loop s_loop3;
+--                        when others =>
+--                            null;
+--                    end case;
+--                end loop;
+--                if hasError then
+--                    stateTracker <= Error;
+--                else
+--                    stateTracker <= FilterJobs;
+--                end if;
+--            end if;
         when FilterJobs =>
             reset <= '0';
---            for i in 1 to 1611 loop
---                if allJobs(i).observed then
---                    sim_loop: for c in 0 to i - 1 loop
---                        if allJobs(c).observed and allJobs(c).currentState = allJobs(i).currentState and allJobs(c).executeOnEntry = allJobs(i).executeOnEntry then
---                            case allJobs(i).currentState is
---                                when STATE_Initial =>
---                                    exit sim_loop;
---                                when STATE_FROff =>
---                                    if currentJobs(c).demand = currentJobs(i).demand and currentJobs(c).heat = currentJobs(i).heat then
---                                        exit sim_loop;
---                                    end if;
---                                when STATE_FROn =>
---                                    if currentJobs(c).demand = currentJobs(i).demand then
---                                        exit sim_loop;
---                                    end if;
---                            end case;
---                        elsif c = i - 1 and allJobs(c).observed = false then
---                            currentJobs(currentJobIndex) <= allJobs(i);
---                            currentJobIndex := currentJobIndex + 1;
---                        end if;
---                    end loop sim_loop;
---                end if;
---            end loop;
+            setInternalSignals <= '0';
+            for i in 1 to 1611 loop
+                if allJobs(i).observed then
+                    sim_loop: for c in 0 to i - 1 loop
+                        if allJobs(c).observed and allJobs(c).currentState = allJobs(i).currentState and allJobs(c).executeOnEntry = allJobs(i).executeOnEntry then
+                            case allJobs(i).currentState is
+                                when STATE_Initial =>
+                                    exit sim_loop;
+                                when STATE_FROff =>
+                                    if allJobs(c).demand = allJobs(i).demand and allJobs(c).heat = allJobs(i).heat then
+                                        exit sim_loop;
+                                    end if;
+                                when STATE_FROn =>
+                                    if allJobs(c).demand = allJobs(i).demand then
+                                        exit sim_loop;
+                                    end if;
+                            end case;
+                        elsif c = i - 1 and allJobs(c).observed = false then
+                            currentJobs(currentJobIndex) <= allJobs(i);
+                            currentJobIndex := currentJobIndex + 1;
+                        end if;
+                    end loop sim_loop;
+                end if;
+            end loop;
+            if currentJobIndex < 1612 then
+                for cj in currentJobIndex to 1611 loop
+                    currentJobs(cj).observed <= false;
+                end loop;
+            end if;
             stateTracker <= ExecuteReadSnapshot;
 --        when ExecuteReadSnapshot =>
 --            initialReadIndex := -1;

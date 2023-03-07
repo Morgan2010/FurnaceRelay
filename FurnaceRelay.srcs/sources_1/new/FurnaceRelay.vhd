@@ -16,6 +16,7 @@ entity FurnaceRelay is
         FurnaceRelay_currentStateOut: out std_logic_vector(1 downto 0);
         FurnaceRelay_previousRingletOut: out std_logic_vector(1 downto 0);
         FurnaceRelay_internalStateOut: out std_logic_vector(2 downto 0);
+        setInternalSignals: in std_logic;
         reset: in std_logic
     );
 end FurnaceRelay;
@@ -122,9 +123,11 @@ begin
                         null;
                 end case;
             else
-                currentState <= FurnaceRelay_currentStateIn;
-                previousRinglet <= FurnaceRelay_previousRingletIn;
-                internalState <= FurnaceRelay_internalStateIn;
+                if setInternalSignals = '1' then
+                    currentState <= FurnaceRelay_currentStateIn;
+                    previousRinglet <= FurnaceRelay_previousRingletIn;
+                    internalState <= FurnaceRelay_internalStateIn;
+                end if;
             end if;
         end if;
     end process;
