@@ -512,17 +512,17 @@ if rising_edge(clk) then
                 end if;
             end loop;
             stateTracker <= CalculateEdgeSetup;
---        when CalculateEdgeSetup =>
---            for k in 0 to 1611 loop
---                if writeSnapshotJobs(k).observed then
---                    snapshotTracker <= k;
---                    stateTracker <= SetWriteSnapshotJobs;
---                    skippedJobs := 0;
---                    exit;
---                elsif k = 1611 then
---                    stateTracker <= GenerateWorkingJob;
---                end if;
---            end loop;
+        when CalculateEdgeSetup =>
+            for k in 0 to 1611 loop
+                if writeSnapshotJobs(k).observed then
+                    snapshotTracker <= k;
+                    stateTracker <= SetWriteSnapshotJobs;
+                    skippedJobs := 0;
+                    exit;
+                elsif k = 1611 then
+                    stateTracker <= GenerateWorkingJob;
+                end if;
+            end loop;
 --        when SetWriteSnapshotJobs =>
 --            case writeSnapshotJobs(snapshotTracker).currentState is
 --                when STATE_Initial =>
