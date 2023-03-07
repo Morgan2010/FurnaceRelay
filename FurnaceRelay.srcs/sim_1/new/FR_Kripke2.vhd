@@ -152,9 +152,9 @@ process(clk)
 variable skippedJobs: natural := 0;
 variable skippedWrites: natural := 0;
 variable hasError: boolean := false;
---variable initialReadIndex: integer range -1 to 1 := -1;
---variable frOffReadIndex: integer range -1 to 1457 := -1;
---variable frOnReadIndex: integer range -1 to 161 := -1;
+variable initialReadIndex: integer range -1 to 1 := -1;
+variable frOffReadIndex: integer range -1 to 1457 := -1;
+variable frOnReadIndex: integer range -1 to 161 := -1;
 --variable initialWriteIndex: integer range -1 to 1 := -1;
 --variable frOffWriteIndex: integer range -1 to 1457 := -1;
 --variable frOnWriteIndex: integer range -1 to 161 := -1;
@@ -268,78 +268,80 @@ if rising_edge(clk) then
                 end loop;
             end if;
             stateTracker <= ExecuteReadSnapshot;
---        when ExecuteReadSnapshot =>
---            initialReadIndex := -1;
---            frOffReadIndex := -1;
---            frOnReadIndex := -1;
---            for c in 0 to 1611 loop
---                if currentJobs(c).observed then
---                    case currentJobs(c).currentState is
---                        when STATE_Initial =>
---                            for s in 0 to 1 loop
---                                if initialReadSnapshots(s).observed = false and s > initialReadIndex then
---                                    initialReadSnapshots(s) <= (
---                                        executeOnEntry => currentJobs(c).executeOnEntry,
---                                        observed => true
---                                    );
---                                    initialReadIndex := s;
---                                    exit;
---                                elsif s = 1 and initialReadSnapshots(s).observed = true then
---                                    hasError := true;
---                                end if;
---                            end loop;
---                        when STATE_FROff =>
---                            for s in 0 to 1457 loop
---                                if frOffReadSnapshots(s).observed = false and s > frOffReadIndex then
---                                    frOffReadSnapshots(s) <= (
---                                        demand => currentJobs(c).demand,
---                                        heat => currentJobs(c).heat,
---                                        executeOnEntry => currentJobs(c).executeOnEntry,
---                                        observed => true
---                                    );
---                                    frOffReadIndex := s;
---                                    exit;
---                                elsif s = 1457 and frOffReadSnapshots(s).observed = true then
---                                    hasError := true;
---                                end if;
---                            end loop;
---                        when STATE_FROn =>
---                            for s in 0 to 161 loop
---                                if frOnReadSnapshots(s).observed = false and s > frOnReadIndex then
---                                    frOnReadSnapshots(s) <= (
---                                        demand => currentJobs(c).demand,
---                                        executeOnEntry => currentJobs(c).executeOnEntry,
---                                        observed => true
---                                    );
---                                    frOnReadIndex := s;
---                                    exit;
---                                elsif s = 161 and frOnReadSnapshots(s).observed = true then
---                                    hasError := true;
---                                end if;
---                            end loop;
---                        when others =>
---                            null;
---                    end case;
---                end if;
---            end loop;
---            if hasError then
---                stateTracker <= Error;
---            else
---                for c2 in 0 to 1611 loop
---                    if c2 = 1611 and currentJobs(c2).observed = false then
---                        reset <= '0';
---                        for i in 0 to 1611 loop
---                            currentJobs(i).internalState <= WriteSnapshot;
---                        end loop;
---                        stateTracker <= CalculateEdgeSetup;
---                    els
---                    if currentJobs(c2).observed then
---                        reset <= '1';
---                        stateTracker <= WaitForWriteSnapshot;
---                        exit;
---                    end if;
---                end loop;
---            end if;
+        when ExecuteReadSnapshot =>
+            initialReadIndex := -1;
+            frOffReadIndex := -1;
+            frOnReadIndex := -1;
+            for c in 0 to 1611 loop
+                if currentJobs(c).observed then
+                    case currentJobs(c).currentState is
+                        when STATE_Initial =>
+                            for s in 0 to 1 loop
+                                if initialReadSnapshots(s).observed = false and s > initialReadIndex then
+                                    initialReadSnapshots(s) <= (
+                                        executeOnEntry => currentJobs(c).executeOnEntry,
+                                        observed => true
+                                    );
+                                    initialReadIndex := s;
+                                    exit;
+                                elsif s = 1 and initialReadSnapshots(s).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                        when STATE_FROff =>
+                            for s in 0 to 1457 loop
+                                if frOffReadSnapshots(s).observed = false and s > frOffReadIndex then
+                                    frOffReadSnapshots(s) <= (
+                                        demand => currentJobs(c).demand,
+                                        heat => currentJobs(c).heat,
+                                        executeOnEntry => currentJobs(c).executeOnEntry,
+                                        observed => true
+                                    );
+                                    frOffReadIndex := s;
+                                    exit;
+                                elsif s = 1457 and frOffReadSnapshots(s).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                        when STATE_FROn =>
+                            for s in 0 to 161 loop
+                                if frOnReadSnapshots(s).observed = false and s > frOnReadIndex then
+                                    frOnReadSnapshots(s) <= (
+                                        demand => currentJobs(c).demand,
+                                        executeOnEntry => currentJobs(c).executeOnEntry,
+                                        observed => true
+                                    );
+                                    frOnReadIndex := s;
+                                    exit;
+                                elsif s = 161 and frOnReadSnapshots(s).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                        when others =>
+                            null;
+                    end case;
+                end if;
+            end loop;
+            if hasError then
+                stateTracker <= Error;
+            else
+                for c2 in 0 to 1611 loop
+                    if c2 = 1611 and currentJobs(c2).observed = false then
+                        reset <= '0';
+                        for i in 0 to 1611 loop
+                            currentJobs(i).internalState <= WriteSnapshot;
+                        end loop;
+                        stateTracker <= CalculateEdgeSetup;
+                    elsif currentJobs(c2).observed then
+                        reset <= '1';
+                        stateTracker <= WaitForWriteSnapshot;
+                        for i in 0 to 1611 loop
+                            currentJobs(i).internalState <= ReadSnapshot;
+                        end loop;
+                        exit;
+                    end if;
+                end loop;
+            end if;
 --        when WaitForWriteSnapshot =>
 --            initialReadIndex := -1;
 --            frOffReadIndex := -1;
