@@ -265,31 +265,31 @@ if rising_edge(clk) then
             end if;
             lastIndexSaved <= lastIndex;
             skippedJobsSaved <= skippedJobs;
---        when FilterJobs =>
---            for i in 1 to 1611 loop
---                if currentJobs(i).observed then
---                    for c in 0 to i - 1 loop
---                        case currentJobs(i).currentState is
---                            when STATE_Initial =>
---                                if currentJobs(c).executeOnEntry = currentJobs(i).executeOnEntry and currentJobs(c).currentState = currentJobs(i).currentState and currentJobs(c).observed then
---                                    currentJobs(i).observed <= false;
---                                    exit;
---                                end if;
---                            when STATE_FROff =>
---                                if currentJobs(c).demand = currentJobs(i).demand and currentJobs(c).heat = currentJobs(i).heat and currentJobs(c).executeOnEntry = currentJobs(i).executeOnEntry and currentJobs(c).currentState = currentJobs(i).currentState and currentJobs(c).observed then
---                                    currentJobs(i).observed <= false;
---                                    exit;
---                                end if;
---                            when STATE_FROn =>
---                                if currentJobs(c).demand = currentJobs(i).demand and currentJobs(c).executeOnEntry = currentJobs(i).executeOnEntry and currentJobs(c).currentState = currentJobs(i).currentState and currentJobs(c).observed then
---                                    currentJobs(i).observed <= false;
---                                    exit;
---                                end if;
---                        end case;
---                    end loop;
---                end if;
---            end loop;
---            stateTracker <= ExecuteReadSnapshot;
+        when FilterJobs =>
+            for i in 1 to 1611 loop
+                if currentJobs(i).observed then
+                    for c in 0 to i - 1 loop
+                        if currentJobs(c).observed and currentJobs(c).currentState = currentJobs(i).currentState and currentJobs(c).executeOnEntry = currentJobs(i).executeOnEntry then
+                            case currentJobs(i).currentState is
+                                when STATE_Initial =>
+                                    currentJobs(i).observed <= false;
+                                    exit;
+                                when STATE_FROff =>
+                                    if currentJobs(c).demand = currentJobs(i).demand and currentJobs(c).heat = currentJobs(i).heat then
+                                        currentJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                                when STATE_FROn =>
+                                    if currentJobs(c).demand = currentJobs(i).demand then
+                                        currentJobs(i).observed <= false;
+                                        exit;
+                                    end if;
+                            end case;
+                        end if;
+                    end loop;
+                end if;
+            end loop;
+            stateTracker <= ExecuteReadSnapshot;
 --        when ExecuteReadSnapshot =>
 --            initialReadIndex := -1;
 --            frOffReadIndex := -1;
