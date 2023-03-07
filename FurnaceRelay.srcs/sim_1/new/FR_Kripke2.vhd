@@ -269,13 +269,11 @@ if rising_edge(clk) then
             end if;
             stateTracker <= ExecuteReadSnapshot;
         when ExecuteReadSnapshot =>
---            for aj in 0 to 1611 loop
---                allJobs(aj).observed <= false;
---            end loop;
             initialReadIndex := -1;
             frOffReadIndex := -1;
             frOnReadIndex := -1;
             for c in 0 to 1611 loop
+                allJobs(c).observed <= false;
                 if currentJobs(c).observed then
                     case currentJobs(c).currentState is
                         when STATE_Initial =>
