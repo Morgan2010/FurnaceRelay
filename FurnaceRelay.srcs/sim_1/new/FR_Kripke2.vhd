@@ -162,6 +162,7 @@ begin
 if rising_edge(clk) then
     case stateTracker is
         when Initialisation =>
+            setInternalSignals <= '0';
             reset <= '0';
             for i in 0 to 8 loop
                 for j in 0 to 8 loop
@@ -184,6 +185,7 @@ if rising_edge(clk) then
             end loop;
             stateTracker <= GenerateWorkingJob;
         when GenerateWorkingJob =>
+            setInternalSignals <= '0';
             reset <= '0';
             if allJobs(0).observed = false and writeSnapshotJobs(0).observed = false then
                 stateTracker <= Finished;
@@ -237,7 +239,7 @@ if rising_edge(clk) then
             end if;
         when FilterJobs =>
             reset <= '0';
-            setInternalSignals <= '0';
+            setInternalSignals <= '1';
             if allJobs(0).observed then
                 currentJobs(0) <= allJobs(0);
                 currentJobIndex := 1;
@@ -277,6 +279,8 @@ if rising_edge(clk) then
             initialReadIndex := -1;
             frOffReadIndex := -1;
             frOnReadIndex := -1;
+            reset <= '0';
+            setInternalSignals <= '1';
             for c in 0 to 1611 loop
                 allJobs(c).observed <= false;
                 if currentJobs(c).observed then
@@ -333,13 +337,11 @@ if rising_edge(clk) then
             else
                 for c2 in 0 to 1611 loop
                     if c2 = 1611 and currentJobs(c2).observed = false then
-                        reset <= '0';
                         for i in 0 to 1611 loop
                             currentJobs(i).internalState <= WriteSnapshot;
                         end loop;
                         stateTracker <= CalculateEdgeSetup;
                     elsif currentJobs(c2).observed then
-                        reset <= '1';
                         stateTracker <= WaitForWriteSnapshot;
                         for i in 0 to 1611 loop
                             currentJobs(i).internalState <= ReadSnapshot;
@@ -355,6 +357,8 @@ if rising_edge(clk) then
             initialWriteIndex := -1;
             frOffWriteIndex := -1;
             frOnWriteIndex := -1;
+            setInternalSignals <= '0';
+            reset <= '1';
             if internalState = WriteSnapshot then
                 reset <= '0';
                 skippedWrites := 0;
@@ -480,6 +484,7 @@ if rising_edge(clk) then
                 end if;
             end if;
         when FilterWriteSnapshots =>
+            setInternalSignals <= '0';
             for i in 1 to 1611 loop
                 if writeSnapshotJobs(i).observed then
                     for j in 0 to i - 1 loop
@@ -507,6 +512,7 @@ if rising_edge(clk) then
             end loop;
             stateTracker <= CalculateEdgeSetup;
         when CalculateEdgeSetup =>
+            setInternalSignals <= '0';
             for k in 0 to 1611 loop
                 if writeSnapshotJobs(k).observed then
                     snapshotTracker <= k;
