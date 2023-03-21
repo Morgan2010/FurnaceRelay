@@ -41,39 +41,12 @@ end FR_Kripke2;
 
 architecture Behavioral of FR_Kripke2 is
     signal clk: std_logic := '0';
-    signal allJobs: DataStore_t := (
-        others => (
-            demand => "UU",
-            heat => 'U',
-            relayOn => 'U',
-            fr_demand => "UU",
-            fr_heat => 'U',
-            currentState => STATE_Initial,
-            previousRinglet => "ZZ",
-            internalState => ReadSnapshot,
-            currentStateOut => STATE_Initial,
-            executeOnEntry => true,
-            observed => false
-        )
-    );
-    signal currentJobs: DataStore_t := (
-        others => (
-            demand => "UU",
-            heat => 'U',
-            relayOn => 'U',
-            fr_demand => "UU",
-            fr_heat => 'U',
-            currentState => STATE_Initial,
-            previousRinglet => "ZZ",
-            internalState => ReadSnapshot,
-            currentStateOut => STATE_Initial,
-            executeOnEntry => true,
-            observed => false
-        )
-    );
+    signal allJobs: DataStore_t;
+    signal currentJobs: DataStore_t;
     signal writeSnapshotJobs: DataStore_t;
     signal reset: std_logic := '0';
     signal internalState: std_logic_vector(2 downto 0);
+    signal internalStateOut: std_logic_vector(2 downto 0);
     
     signal initialReadsnapshots: Initial_ReadSnapshots_t;
     signal frOffReadSnapshots: FROff_ReadSnapshots_t;
@@ -92,7 +65,7 @@ architecture Behavioral of FR_Kripke2 is
     constant Initialisation: std_logic_vector(3 downto 0) := (others => '0');
     constant GenerateWorkingJob: std_logic_vector(3 downto 0) := x"1";
     constant Finished: std_logic_vector(3 downto 0) := x"2";
-    constant ExecuteReadSnapshot: std_logic_vector(3 downto 0) := x"3";
+    constant StartExecution: std_logic_vector(3 downto 0) := x"3";
     constant WaitForWriteSnapshot: std_logic_vector(3 downto 0) := x"4";
     constant CalculateEdgeSetup: std_logic_vector(3 downto 0) := x"5";
     constant SetWriteSnapshotJobs: std_logic_vector(3 downto 0) := x"6";
@@ -101,6 +74,9 @@ architecture Behavioral of FR_Kripke2 is
     constant FilterJobs: std_logic_vector(3 downto 0) := x"9";
     constant FilterWriteSnapshots: std_logic_vector(3 downto 0) := x"A";
     constant RemoveJobs: std_logic_vector(3 downto 0) := x"B";
+    constant UpdateWriteSnapshots: std_logic_vector(3 downto 0) := x"C";
+    constant SetupReadSnapshots: std_logic_vector(3 downto 0) := x"D";
+    constant WaitForStart: std_logic_vector(3 downto 0) := x"E";
     signal stateTracker: std_logic_vector(3 downto 0) := Initialisation;
     signal snapshotTracker: integer range 0 to 1611 := 0;
     signal setInternalSignals: std_logic := '0';
@@ -139,7 +115,7 @@ begin
             FurnaceRelay_previousRingletIn => currentJobs(i).previousRinglet,
             FurnaceRelay_internalStateIn => currentJobs(i).internalState,
             FurnaceRelay_currentStateOut => currentJobs(i).currentStateOut,
-            FurnaceRelay_internalStateOut => internalState,
+            FurnaceRelay_internalStateOut => internalStateOut,
             setInternalSignals => setInternalSignals,
             reset => reset
         );
@@ -167,19 +143,16 @@ if rising_edge(clk) then
             for i in 0 to 8 loop
                 for j in 0 to 8 loop
                     for k in 0 to 8 loop
-                        allJobs(i * 81 + j * 9 + k) <= (
-                            demand => (1 => stdLogicTypes(i), 0 => stdLogicTypes(j)),
-                            heat => stdLogicTypes(k),
-                            relayOn => '0',
-                            fr_demand => (1 => stdLogicTypes(i), 0 => stdLogicTypes(j)),
-                            fr_heat => stdLogicTypes(k),
-                            currentState => STATE_Initial,
-                            previousRinglet => "ZZ",
-                            internalState => ReadSnapshot,
-                            currentStateOut => STATE_Initial,
-                            executeOnEntry => true,
-                            observed => true
-                        );
+                        allJobs(i * 81 + j * 9 + k).demand <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
+                        allJobs(i * 81 + j * 9 + k).heat <= stdLogicTypes(k);
+                        allJobs(i * 81 + j * 9 + k).relayOn <= '0';
+                        allJobs(i * 81 + j * 9 + k).fr_demand <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
+                        allJobs(i * 81 + j * 9 + k).fr_heat <= stdLogicTypes(k);
+                        allJobs(i * 81 + j * 9 + k).currentState <= STATE_Initial;
+                        allJobs(i * 81 + j * 9 + k).previousRinglet <= "ZZ";
+                        allJobs(i * 81 + j * 9 + k).internalState <= ReadSnapshot;
+                        allJobs(i * 81 + j * 9 + k).executeOnEntry <= true;
+                        allJobs(i * 81 + j * 9 + k).observed <= true;
                     end loop;
                 end loop;
             end loop;
@@ -274,13 +247,17 @@ if rising_edge(clk) then
                     currentJobs(cj).observed <= false;
                 end loop;
             end if;
-            stateTracker <= ExecuteReadSnapshot;
-        when ExecuteReadSnapshot =>
+            stateTracker <= SetupReadSnapshots;
+        when Error =>
+            reset <= '0';
+            setInternalSignals <= '0';
+        when SetupReadSnapshots =>
             initialReadIndex := -1;
             frOffReadIndex := -1;
             frOnReadIndex := -1;
             reset <= '0';
             setInternalSignals <= '1';
+            internalState <= ReadSnapshot;
             for c in 0 to 1611 loop
                 allJobs(c).observed <= false;
                 if currentJobs(c).observed then
@@ -342,7 +319,7 @@ if rising_edge(clk) then
                         end loop;
                         stateTracker <= CalculateEdgeSetup;
                     elsif currentJobs(c2).observed then
-                        stateTracker <= WaitForWriteSnapshot;
+                        stateTracker <= StartExecution;
                         for i in 0 to 1611 loop
                             currentJobs(i).internalState <= ReadSnapshot;
                         end loop;
@@ -350,138 +327,151 @@ if rising_edge(clk) then
                     end if;
                 end loop;
             end if;
+        when StartExecution =>
+            reset <= '1';
+            setInternalSignals <= '0';
+            stateTracker <= WaitForStart;
+        when WaitForStart =>
+            reset <= '1';
+            setInternalSignals <= '0';
+            stateTracker <= WaitForWriteSnapshot;
         when WaitForWriteSnapshot =>
+            setInternalSignals <= '0';
+            if internalStateOut = WriteSnapshot then
+                reset <= '0';
+                stateTracker <= UpdateWriteSnapshots;
+            else
+                reset <= '1';
+            end if;
+        when UpdateWriteSnapshots =>
             initialReadIndex := -1;
             frOffReadIndex := -1;
             frOnReadIndex := -1;
             initialWriteIndex := -1;
             frOffWriteIndex := -1;
             frOnWriteIndex := -1;
+            reset <= '0';
+            skippedWrites := 0;
             setInternalSignals <= '0';
-            reset <= '1';
-            if internalState = WriteSnapshot then
-                reset <= '0';
-                skippedWrites := 0;
-                for i in 0 to 1611 loop
-                    if currentJobs(i).observed then
-                        case currentJobs(i).currentState is
-                            when STATE_Initial =>
-                                for r in 0 to 1 loop
-                                    if initialRinglets(r).observed = false and r > initialReadIndex then
-                                        initialRinglets(r) <= (
-                                            read => (executeOnEntry => currentJobs(i).executeOnEntry, observed => true),
-                                            write => (executeOnEntry => currentJobs(i).executeOnEntry, observed => true),
+            for i in 0 to 1611 loop
+                if currentJobs(i).observed then
+                    case currentJobs(i).currentState is
+                        when STATE_Initial =>
+                            for r in 0 to 1 loop
+                                if initialRinglets(r).observed = false and r > initialReadIndex then
+                                    initialRinglets(r) <= (
+                                        read => (executeOnEntry => currentJobs(i).executeOnEntry, observed => true),
+                                        write => (executeOnEntry => currentJobs(i).executeOnEntry, observed => true),
+                                        observed => true
+                                    );
+                                    initialReadIndex := r;
+                                    exit;
+                                elsif r = 1 then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                            for w in 0 to 1 loop
+                                if initialWriteSnapshots(w).observed = true and initialWriteSnapshots(w).executeOnEntry = currentJobs(i).executeOnEntry then
+                                    skippedWrites := skippedWrites + 1;
+                                    exit;
+                                elsif initialWriteSnapshots(w).observed = false and w > initialWriteIndex then
+                                    initialWriteSnapshots(w) <= (executeOnEntry => currentJobs(i).executeOnentry, observed => true);
+                                    writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
+                                    initialWriteIndex := w;
+                                    exit;
+                                elsif w = 1 and initialWriteSnapshots(w).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                        when STATE_FROff =>
+                            for r in 0 to 1457 loop
+                                if frOffRinglets(r).observed = false and r > frOffReadIndex then
+                                    frOffRinglets(r) <= (
+                                        read => (
+                                            demand => currentJobs(i).demand,
+                                            heat => currentJobs(i).heat,
+                                            executeOnEntry => currentJobs(i).executeOnEntry,
                                             observed => true
-                                        );
-                                        initialReadIndex := r;
-                                        exit;
-                                    elsif r = 1 then
-                                        hasError := true;
-                                    end if;
-                                end loop;
-                                for w in 0 to 1 loop
-                                    if initialWriteSnapshots(w).observed = true and initialWriteSnapshots(w).executeOnEntry = currentJobs(i).executeOnEntry then
-                                        skippedWrites := skippedWrites + 1;
-                                        exit;
-                                    elsif initialWriteSnapshots(w).observed = false and w > initialWriteIndex then
-                                        initialWriteSnapshots(w) <= (executeOnEntry => currentJobs(i).executeOnentry, observed => true);
-                                        writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
-                                        initialWriteIndex := w;
-                                        exit;
-                                    elsif w = 1 and initialWriteSnapshots(w).observed = true then
-                                        hasError := true;
-                                    end if;
-                                end loop;
-                            when STATE_FROff =>
-                                for r in 0 to 1457 loop
-                                    if frOffRinglets(r).observed = false and r > frOffReadIndex then
-                                        frOffRinglets(r) <= (
-                                            read => (
-                                                demand => currentJobs(i).demand,
-                                                heat => currentJobs(i).heat,
-                                                executeOnEntry => currentJobs(i).executeOnEntry,
-                                                observed => true
-                                            ),
-                                            write => (
-                                                demand => currentJobs(i).fr_demand,
-                                                heat => currentJobs(i).fr_heat,
-                                                relayOn => currentJobs(i).relayOn,
-                                                executeOnEntry => currentJobs(i).executeOnEntry,
-                                                observed => true
-                                            ),
-                                            observed => true
-                                        );
-                                        frOffReadIndex := r;
-                                        exit;
-                                    elsif r = 1457 then
-                                        hasError := true;
-                                    end if;
-                                end loop;
-                                for w in 0 to 1457 loop
-                                    if frOffWriteSnapshots(w).demand = currentJobs(i).fr_demand and frOffWriteSnapshots(w).heat = currentJobs(i).fr_heat and frOffWriteSnapshots(w).relayOn = currentJobs(i).relayOn and frOffWriteSnapshots(w).executeOnEntry = currentJobs(i).executeOnEntry and frOffWriteSnapshots(w).observed = true then
-                                        skippedWrites := skippedWrites + 1;
-                                        exit;
-                                    elsif frOffWriteSnapshots(w).observed = false and w > frOffWriteIndex then
-                                        frOffWriteSnapshots(w) <= (
+                                        ),
+                                        write => (
                                             demand => currentJobs(i).fr_demand,
                                             heat => currentJobs(i).fr_heat,
                                             relayOn => currentJobs(i).relayOn,
                                             executeOnEntry => currentJobs(i).executeOnEntry,
                                             observed => true
-                                        );
-                                        writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
-                                        frOffWriteIndex := w;
-                                        exit;
-                                    elsif w = 1457 and frOffWriteSnapshots(w).observed = true then
-                                        hasError := true;
-                                    end if;
-                                end loop;
-                            when STATE_FROn =>
-                                for r in 0 to 161 loop
-                                    if frOnRinglets(r).observed = false and r > frOnReadIndex then
-                                        frOnRinglets(r) <= (
-                                            read => (
-                                                demand => currentJobs(i).demand,
-                                                executeOnEntry => currentJobs(i).executeOnEntry,
-                                                observed => true
-                                            ),
-                                            write => (
-                                                demand => currentJobs(i).fr_demand,
-                                                relayOn => currentJobs(i).relayOn,
-                                                executeOnEntry => currentJobs(i).executeOnEntry,
-                                                observed => true
-                                            ),
+                                        ),
+                                        observed => true
+                                    );
+                                    frOffReadIndex := r;
+                                    exit;
+                                elsif r = 1457 then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                            for w in 0 to 1457 loop
+                                if frOffWriteSnapshots(w).demand = currentJobs(i).fr_demand and frOffWriteSnapshots(w).heat = currentJobs(i).fr_heat and frOffWriteSnapshots(w).relayOn = currentJobs(i).relayOn and frOffWriteSnapshots(w).executeOnEntry = currentJobs(i).executeOnEntry and frOffWriteSnapshots(w).observed = true then
+                                    skippedWrites := skippedWrites + 1;
+                                    exit;
+                                elsif frOffWriteSnapshots(w).observed = false and w > frOffWriteIndex then
+                                    frOffWriteSnapshots(w) <= (
+                                        demand => currentJobs(i).fr_demand,
+                                        heat => currentJobs(i).fr_heat,
+                                        relayOn => currentJobs(i).relayOn,
+                                        executeOnEntry => currentJobs(i).executeOnEntry,
+                                        observed => true
+                                    );
+                                    writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
+                                    frOffWriteIndex := w;
+                                    exit;
+                                elsif w = 1457 and frOffWriteSnapshots(w).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                        when STATE_FROn =>
+                            for r in 0 to 161 loop
+                                if frOnRinglets(r).observed = false and r > frOnReadIndex then
+                                    frOnRinglets(r) <= (
+                                        read => (
+                                            demand => currentJobs(i).demand,
+                                            executeOnEntry => currentJobs(i).executeOnEntry,
                                             observed => true
-                                        );
-                                        frOnReadIndex := r;
-                                        exit;
-                                    elsif r = 161 then
-                                        hasError := true;
-                                    end if;
-                                end loop;
-                                for w in 0 to 161 loop
-                                    if frOnWriteSnapshots(w).demand = currentJobs(i).fr_demand and frOnWriteSnapshots(w).relayOn = currentJobs(i).relayOn and frOnWriteSnapshots(w).observed = true and frOnWriteSnapshots(w).executeOnEntry = currentJobs(i).executeOnEntry then
-                                        skippedWrites := skippedWrites + 1;
-                                        exit;
-                                    elsif frOnWriteSnapshots(w).observed = false and w > frOnWriteIndex then
-                                        frOnWriteSnapshots(w) <= (demand => currentJobs(i).fr_demand, relayOn => currentJobs(i).relayOn, executeOnEntry => currentJobs(i).executeOnEntry, observed => true);
-                                        writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
-                                        frOnWriteIndex := w;
-                                        exit;
-                                    elsif w = 161 and frOnWriteSnapshots(w).observed = true then
-                                        hasError := true;
-                                    end if;
-                                end loop;
-                            when others =>
-                                null;
-                        end case;
-                    end if;
-                end loop;
-                if hasError then
-                    stateTracker <= Error;
-                else
-                    stateTracker <= FilterWriteSnapshots;
+                                        ),
+                                        write => (
+                                            demand => currentJobs(i).fr_demand,
+                                            relayOn => currentJobs(i).relayOn,
+                                            executeOnEntry => currentJobs(i).executeOnEntry,
+                                            observed => true
+                                        ),
+                                        observed => true
+                                    );
+                                    frOnReadIndex := r;
+                                    exit;
+                                elsif r = 161 then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                            for w in 0 to 161 loop
+                                if frOnWriteSnapshots(w).demand = currentJobs(i).fr_demand and frOnWriteSnapshots(w).relayOn = currentJobs(i).relayOn and frOnWriteSnapshots(w).observed = true and frOnWriteSnapshots(w).executeOnEntry = currentJobs(i).executeOnEntry then
+                                    skippedWrites := skippedWrites + 1;
+                                    exit;
+                                elsif frOnWriteSnapshots(w).observed = false and w > frOnWriteIndex then
+                                    frOnWriteSnapshots(w) <= (demand => currentJobs(i).fr_demand, relayOn => currentJobs(i).relayOn, executeOnEntry => currentJobs(i).executeOnEntry, observed => true);
+                                    writeSnapshotJobs(i - skippedWrites) <= currentJobs(i);
+                                    frOnWriteIndex := w;
+                                    exit;
+                                elsif w = 161 and frOnWriteSnapshots(w).observed = true then
+                                    hasError := true;
+                                end if;
+                            end loop;
+                        when others =>
+                            null;
+                    end case;
                 end if;
+            end loop;
+            if hasError then
+                stateTracker <= Error;
+            else
+                stateTracker <= FilterWriteSnapshots;
             end if;
         when FilterWriteSnapshots =>
             setInternalSignals <= '0';
