@@ -13,8 +13,8 @@ entity FurnaceRelay is
         FurnaceRelay_currentStateIn: in std_logic_vector(1 downto 0);
         FurnaceRelay_previousRingletIn: in std_logic_vector(1 downto 0);
         FurnaceRelay_internalStateIn: in std_logic_vector(2 downto 0);
-        FurnaceRelay_currentStateOut: out std_logic_vector(1 downto 0);
-        FurnaceRelay_previousRingletOut: out std_logic_vector(1 downto 0);
+        FurnaceRelay_currentStateOut: out std_logic_vector(1 downto 0) := "00";
+        FurnaceRelay_previousRingletOut: out std_logic_vector(1 downto 0) := "ZZ";
         FurnaceRelay_internalStateOut: out std_logic_vector(2 downto 0);
         setInternalSignals: in std_logic;
         reset: in std_logic
@@ -44,9 +44,6 @@ architecture Behavioral of FurnaceRelay is
     signal RelayOn: std_logic;
 begin
 
-    FurnaceRelay_currentStateOut <= currentState;
-    FurnaceRelay_previousRingletOut <= previousRinglet;
-    FurnaceRelay_internalStateOut <= internalState;
     FurnaceRelay_demand <= demand;
     FurnaceRelay_heat <= heat;
 
@@ -60,27 +57,34 @@ begin
                             when STATE_Initial =>
                                 targetState <= STATE_FROff;
                                 internalState <= OnExit;
+                                FurnaceRelay_internalStateOut <= OnExit;
                             when STATE_FROff =>
                                 if (demand = "10" and Heat = '1') then
                                     targetState <= STATE_FROn;
                                     internalState <= OnExit;
+                                    FurnaceRelay_internalStateOut <= OnExit;
                                 else
                                     internalState <= Internal;
+                                    FurnaceRelay_internalStateOut <= Internal;
                                 end if;
                             when STATE_FROn =>
                                 if (demand = "01") then
                                     targetState <= STATE_FROff;
                                     internalState <= OnExit;
+                                    FurnaceRelay_internalStateOut <= OnExit;
                                 else
                                     internalState <= Internal;
+                                    FurnaceRelay_internalStateOut <= Internal;
                                 end if;
                             when others =>
                                 internalState <= Internal;
                         end case;
                     when Internal =>
                         internalState <= WriteSnapshot;
+                        FurnaceRelay_internalStateOut <= WriteSnapshot;
                     when NoOnEntry =>
                         internalState <= CheckTransition;
+                        FurnaceRelay_internalStateOut <= CheckTransition;
                     when OnEntry =>
                         case currentState is
                             when STATE_FROff =>
@@ -91,8 +95,10 @@ begin
                                 null;
                         end case;
                         internalState <= CheckTransition;
+                        FurnaceRelay_internalStateOut <= CheckTransition;
                     when OnExit =>
                         internalState <= WriteSnapshot;
+                        FurnaceRelay_internalStateOut <= WriteSnapshot;
                     when ReadSnapshot =>
                         case currentState is
                             when STATE_FROff =>
@@ -105,8 +111,10 @@ begin
                         end case;
                         if (previousRinglet /= currentState) then
                             internalState <= OnEntry;
+                            FurnaceRelay_internalStateOut <= OnEntry;
                         else
                             internalState <= NoOnEntry;
+                            FurnaceRelay_internalStateOut <= NoOnEntry;
                         end if;
                     when WriteSnapshot =>
                         case currentState is
@@ -118,8 +126,11 @@ begin
                                 null;
                         end case;
                         internalState <= ReadSnapshot;
+                        FurnaceRelay_internalStateOut <= ReadSnapshot;
                         previousRinglet <= currentState;
+                        FurnaceRelay_previousRingletOut <= currentState;
                         currentState <= targetState;
+                        FurnaceRelay_currentStateOut <= targetState;
                     when others =>
                         null;
                 end case;
@@ -128,6 +139,13 @@ begin
                     currentState <= FurnaceRelay_currentStateIn;
                     previousRinglet <= FurnaceRelay_previousRingletIn;
                     internalState <= FurnaceRelay_internalStateIn;
+                    FurnaceRelay_currentStateOut <= FurnaceRelay_currentStateIn;
+                    FurnaceRelay_previousRingletOut <= FurnaceRelay_previousRingletIn;
+                    FurnaceRelay_internalStateOut <= FurnaceRelay_internalStateIn;
+                else
+                    FurnaceRelay_currentStateOut <= currentState;
+                    FurnaceRelay_previousRingletOut <= previousRinglet;
+                    FurnaceRelay_internalStateOut <= internalState;
                 end if;
             end if;
         end if;
