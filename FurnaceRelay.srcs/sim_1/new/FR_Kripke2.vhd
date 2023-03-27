@@ -62,22 +62,24 @@ architecture Behavioral of FR_Kripke2 is
     
     signal initialEdges: Initial_Edges_t;
 
-    constant Initialisation: std_logic_vector(3 downto 0) := (others => '0');
-    constant GenerateWorkingJob: std_logic_vector(3 downto 0) := x"1";
-    constant Finished: std_logic_vector(3 downto 0) := x"2";
-    constant StartExecution: std_logic_vector(3 downto 0) := x"3";
-    constant WaitForWriteSnapshot: std_logic_vector(3 downto 0) := x"4";
-    constant CalculateEdgeSetup: std_logic_vector(3 downto 0) := x"5";
-    constant SetWriteSnapshotJobs: std_logic_vector(3 downto 0) := x"6";
-    constant CalculateEdge: std_logic_vector(3 downto 0) := x"7";
-    constant Error: std_logic_vector(3 downto 0) := x"8";
-    constant FilterJobs: std_logic_vector(3 downto 0) := x"9";
-    constant FilterWriteSnapshots: std_logic_vector(3 downto 0) := x"A";
-    constant RemoveJobs: std_logic_vector(3 downto 0) := x"B";
-    constant UpdateWriteSnapshots: std_logic_vector(3 downto 0) := x"C";
-    constant SetupReadSnapshots: std_logic_vector(3 downto 0) := x"D";
-    constant WaitForStart: std_logic_vector(3 downto 0) := x"E";
-    signal stateTracker: std_logic_vector(3 downto 0) := Initialisation;
+    constant Initialisation: std_logic_vector(4 downto 0) := (others => '0');
+    constant GenerateWorkingJob: std_logic_vector(4 downto 0) := "0" & x"1";
+    constant Finished: std_logic_vector(4 downto 0) := "0" & x"2";
+    constant StartExecution: std_logic_vector(4 downto 0) := "0" & x"3";
+    constant WaitForWriteSnapshot: std_logic_vector(4 downto 0) := "0" & x"4";
+    constant CalculateEdgeSetup: std_logic_vector(4 downto 0) := "0" & x"5";
+    constant SetWriteSnapshotJobs: std_logic_vector(4 downto 0) := "0" & x"6";
+    constant CalculateEdge: std_logic_vector(4 downto 0) := "0" & x"7";
+    constant Error: std_logic_vector(4 downto 0) := "0" & x"8";
+    constant FilterJobs: std_logic_vector(4 downto 0) := "0" & x"9";
+    constant FilterWriteSnapshots: std_logic_vector(4 downto 0) := "0" & x"A";
+    constant RemoveJobs: std_logic_vector(4 downto 0) := "0" & x"B";
+    constant UpdateWriteSnapshots: std_logic_vector(4 downto 0) := "0" & x"C";
+    constant SetupReadSnapshots: std_logic_vector(4 downto 0) := "0" & x"D";
+    constant WaitForStart: std_logic_vector(4 downto 0) := "0" & x"E";
+    constant WaitForInitialisation: std_logic_vector(4 downto 0) := "0" & x"F";
+    constant WaitForSetReadSnasphot: std_logic_vector(4 downto 0) := "10000";
+    signal stateTracker: std_logic_vector(4 downto 0) := Initialisation;
     signal snapshotTracker: integer range 0 to 1611 := 0;
     signal setInternalSignals: std_logic := '0';
     
@@ -94,6 +96,8 @@ architecture Behavioral of FR_Kripke2 is
             FurnaceRelay_previousRingletIn: in std_logic_vector(1 downto 0);
             FurnaceRelay_internalStateIn: in std_logic_vector(2 downto 0);
             FurnaceRelay_currentStateOut: out std_logic_vector(1 downto 0);
+            FurnaceRelay_targetStateIn: in std_logic_vector(1 downto 0);
+            FurnaceRelay_targetStateOut: out std_logic_vector(1 downto 0);
             FurnaceRelay_previousRingletOut: out std_logic_vector(1 downto 0);
             FurnaceRelay_internalStateOut: out std_logic_vector(2 downto 0);
             setInternalSignals: in std_logic;
@@ -115,6 +119,8 @@ begin
             FurnaceRelay_previousRingletIn => currentJobs(i).previousRinglet,
             FurnaceRelay_internalStateIn => currentJobs(i).internalState,
             FurnaceRelay_currentStateOut => currentJobs(i).currentStateOut,
+            FurnaceRelay_targetStateIn => currentJobs(i).targetStateIn,
+            FurnaceRelay_targetStateOut => currentJobs(i).targetStateOut,
             FurnaceRelay_internalStateOut => internalStateOut,
             setInternalSignals => setInternalSignals,
             reset => reset
@@ -149,6 +155,7 @@ if rising_edge(clk) then
                         allJobs(i * 81 + j * 9 + k).fr_demand <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
                         allJobs(i * 81 + j * 9 + k).fr_heat <= stdLogicTypes(k);
                         allJobs(i * 81 + j * 9 + k).currentState <= STATE_Initial;
+                        allJobs(i * 81 + j * 9 + k).targetStateIn <= STATE_Initial;
                         allJobs(i * 81 + j * 9 + k).previousRinglet <= "ZZ";
                         allJobs(i * 81 + j * 9 + k).internalState <= ReadSnapshot;
                         allJobs(i * 81 + j * 9 + k).executeOnEntry <= true;
@@ -156,6 +163,8 @@ if rising_edge(clk) then
                     end loop;
                 end loop;
             end loop;
+            stateTracker <= WaitForInitialisation;
+        when WaitForInitialisation =>
             stateTracker <= GenerateWorkingJob;
         when GenerateWorkingJob =>
             setInternalSignals <= '0';
@@ -312,21 +321,25 @@ if rising_edge(clk) then
             if hasError then
                 stateTracker <= Error;
             else
-                for c2 in 0 to 1611 loop
-                    if c2 = 1611 and currentJobs(c2).observed = false then
-                        for i in 0 to 1611 loop
-                            currentJobs(i).internalState <= WriteSnapshot;
-                        end loop;
-                        stateTracker <= CalculateEdgeSetup;
-                    elsif currentJobs(c2).observed then
-                        stateTracker <= StartExecution;
-                        for i in 0 to 1611 loop
-                            currentJobs(i).internalState <= ReadSnapshot;
-                        end loop;
-                        exit;
-                    end if;
-                end loop;
+                stateTracker <= WaitForSetReadSnasphot;
             end if;
+        when WaitForSetReadSnasphot =>
+            reset <= '0';
+            setInternalSignals <= '1';
+            for c2 in 0 to 1611 loop
+                if c2 = 1611 and currentJobs(c2).observed = false then
+                    for i in 0 to 1611 loop
+                        currentJobs(i).internalState <= WriteSnapshot;
+                    end loop;
+                    stateTracker <= CalculateEdgeSetup;
+                elsif currentJobs(c2).observed then
+                    stateTracker <= StartExecution;
+                    for i in 0 to 1611 loop
+                        currentJobs(i).internalState <= ReadSnapshot;
+                    end loop;
+                    exit;
+                end if;
+            end loop;
         when StartExecution =>
             reset <= '1';
             setInternalSignals <= '0';
