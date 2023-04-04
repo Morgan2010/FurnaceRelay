@@ -85,12 +85,15 @@ begin
                                 internalState <= Internal;
                                 FurnaceRelay_internalStateOut <= Internal;
                         end case;
+                        FurnaceRelay_currentStateOut <= currentState;
                     when Internal =>
                         internalState <= WriteSnapshot;
                         FurnaceRelay_internalStateOut <= WriteSnapshot;
+                        FurnaceRelay_currentStateOut <= currentState;
                     when NoOnEntry =>
                         internalState <= CheckTransition;
                         FurnaceRelay_internalStateOut <= CheckTransition;
+                        FurnaceRelay_currentStateOut <= currentState;
                     when OnEntry =>
                         case currentState is
                             when STATE_FROff =>
@@ -102,9 +105,11 @@ begin
                         end case;
                         internalState <= CheckTransition;
                         FurnaceRelay_internalStateOut <= CheckTransition;
+                        FurnaceRelay_currentStateOut <= currentState;
                     when OnExit =>
                         internalState <= WriteSnapshot;
                         FurnaceRelay_internalStateOut <= WriteSnapshot;
+                        FurnaceRelay_currentStateOut <= currentState;
                     when ReadSnapshot =>
                         case currentState is
                             when STATE_FROff =>
@@ -122,6 +127,7 @@ begin
                             internalState <= NoOnEntry;
                             FurnaceRelay_internalStateOut <= NoOnEntry;
                         end if;
+                        FurnaceRelay_currentStateOut <= currentState;
                     when WriteSnapshot =>
                         case currentState is
                             when STATE_FROff =>

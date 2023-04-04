@@ -118,7 +118,7 @@ begin
             FurnaceRelay_heat => currentJobs(i).fr_heat,
             FurnaceRelay_currentStateIn => currentJobs(i).currentState,
             FurnaceRelay_previousRingletIn => currentJobs(i).previousRinglet,
-            FurnaceRelay_internalStateIn => currentJobs(i).internalState,
+            FurnaceRelay_internalStateIn => internalState,
             FurnaceRelay_currentStateOut => currentJobs(i).currentStateOut,
             FurnaceRelay_targetStateIn => currentJobs(i).targetStateIn,
             FurnaceRelay_targetStateOut => currentJobs(i).targetStateOut,
@@ -211,7 +211,7 @@ if rising_edge(clk) then
                                 end if;
                             end loop s_loop3;
                         when others =>
-                            null;
+                            hasError := true;
                     end case;
                 end loop;
                 if hasError then
@@ -224,7 +224,13 @@ if rising_edge(clk) then
             reset <= '0';
             setInternalSignals <= '1';
             if allJobs(0).observed then
-                currentJobs(0) <= allJobs(0);
+                currentJobs(0).demand <= allJobs(0).demand;
+                currentJobs(0).heat <= allJobs(0).heat;
+                currentJobs(0).currentState <= allJobs(0).currentState;
+                currentJobs(0).previousRinglet <= allJobs(0).previousRinglet;
+                currentJobs(0).targetStateIn <= allJobs(0).targetStateIn;
+                currentJobs(0).executeOnEntry <= allJobs(0).executeOnEntry;
+                currentJobs(0).observed <= true;
                 currentJobIndex := 1;
             else
                 currentJobIndex := 0;
@@ -246,7 +252,13 @@ if rising_edge(clk) then
                                     end if;
                             end case;
                         elsif c = i - 1 then
-                            currentJobs(currentJobIndex) <= allJobs(i);
+                            currentJobs(currentJobIndex).demand <= allJobs(i).demand;
+                            currentJobs(currentJobIndex).heat <= allJobs(i).heat;
+                            currentJobs(currentJobIndex).currentState <= allJobs(i).currentState;
+                            currentJobs(currentJobIndex).previousRinglet <= allJobs(i).previousRinglet;
+                            currentJobs(currentJobIndex).targetStateIn <= allJobs(i).targetStateIn;
+                            currentJobs(currentJobIndex).executeOnEntry <= allJobs(i).executeOnEntry;
+                            currentJobs(currentJobIndex).observed <= true;
                             currentJobIndex := currentJobIndex + 1;
                         end if;
                     end loop sim_loop;
@@ -315,7 +327,7 @@ if rising_edge(clk) then
                                 end if;
                             end loop;
                         when others =>
-                            null;
+                            hasError := true;
                     end case;
                 end if;
             end loop;
@@ -351,12 +363,17 @@ if rising_edge(clk) then
             stateTracker <= WaitForWriteSnapshot;
         when WaitForWriteSnapshot =>
             setInternalSignals <= '0';
+            internalState <= internalStateOut;
             if internalStateOut = WriteSnapshot then
                 reset <= '0';
                 stateTracker <= UpdateWriteSnapshots;
             else
                 reset <= '1';
             end if;
+            for i in 0 to 1611 loop
+                currentJobs(i).targetStateIn <= currentJobs(i).targetStateOut;
+                currentJobs(i).currentState <= currentJobs(i).currentStateOut;
+            end loop;
         when UpdateWriteSnapshots =>
             initialReadIndex := -1;
             frOffReadIndex := -1;
@@ -469,7 +486,7 @@ if rising_edge(clk) then
                                 end if;
                             end loop;
                         when others =>
-                            null;
+                            hasError := true;
                     end case;
                 end if;
             end loop;
@@ -489,7 +506,13 @@ if rising_edge(clk) then
             setInternalSignals <= '0';
             reset <= '0';
             if writeSnapshotJobs(0).observed then
-                currentJobs(0) <= writeSnapshotJobs(0);
+                currentJobs(0).demand <= writeSnapshotJobs(0).demand;
+                currentJobs(0).heat <= writeSnapshotJobs(0).heat;
+                currentJobs(0).currentState <= writeSnapshotJobs(0).currentState;
+                currentJobs(0).previousRinglet <= writeSnapshotJobs(0).previousRinglet;
+                currentJobs(0).targetStateIn <= writeSnapshotJobs(0).targetStateIn;
+                currentJobs(0).executeOnEntry <= writeSnapshotJobs(0).executeOnEntry;
+                currentJobs(0).observed <= true;
                 currentJobIndex := 1;
             else
                 currentJobIndex := 0;
@@ -514,7 +537,13 @@ if rising_edge(clk) then
                                     end if;
                             end case;
                         elsif j = i - 1 then
-                            currentJobs(currentJobIndex) <= writeSnapshotJobs(i);
+                            currentJobs(currentJobIndex).demand <= writeSnapshotJobs(i).demand;
+                            currentJobs(currentJobIndex).heat <= writeSnapshotJobs(i).heat;
+                            currentJobs(currentJobIndex).currentState <= writeSnapshotJobs(i).currentState;
+                            currentJobs(currentJobIndex).previousRinglet <= writeSnapshotJobs(i).previousRinglet;
+                            currentJobs(currentJobIndex).targetStateIn <= writeSnapshotJobs(i).targetStateIn;
+                            currentJobs(currentJobIndex).executeOnEntry <= writeSnapshotJobs(i).executeOnEntry;
+                            currentJobs(currentJobIndex).observed <= true;
                             currentJobIndex := currentJobIndex + 1;
                         end if;
                     end loop w_loop;
