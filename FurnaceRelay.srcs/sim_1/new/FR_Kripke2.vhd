@@ -79,6 +79,7 @@ architecture Behavioral of FR_Kripke2 is
     constant WaitForStart: std_logic_vector(4 downto 0) := "0" & x"E";
     constant WaitForInitialisation: std_logic_vector(4 downto 0) := "0" & x"F";
     constant WaitForSetReadSnasphot: std_logic_vector(4 downto 0) := "10000";
+    constant ClearCurrentJobs: std_logic_vector(4 downto 0) := "10001";
     signal stateTracker: std_logic_vector(4 downto 0) := Initialisation;
     signal snapshotTracker: integer range 0 to 1611 := 0;
     signal setInternalSignals: std_logic := '0';
@@ -329,13 +330,13 @@ if rising_edge(clk) then
             for c2 in 0 to 1611 loop
                 if c2 = 1611 and currentJobs(c2).observed = false then
                     for i in 0 to 1611 loop
-                        currentJobs(i).internalState <= WriteSnapshot;
+                        currentJobs(i).internalState <= WriteSnapshot; -- Incorrect. Should use global internalState variable.
                     end loop;
                     stateTracker <= CalculateEdgeSetup;
                 elsif currentJobs(c2).observed then
                     stateTracker <= StartExecution;
                     for i in 0 to 1611 loop
-                        currentJobs(i).internalState <= ReadSnapshot;
+                        currentJobs(i).internalState <= ReadSnapshot; -- Incorrect. Should use global internalState variable.
                     end loop;
                     exit;
                 end if;
@@ -484,33 +485,48 @@ if rising_edge(clk) then
             if hasError then
                 stateTracker <= Error;
             else
-                stateTracker <= FilterWriteSnapshots;
+                stateTracker <= ClearCurrentJobs;
             end if;
+        when ClearCurrentJobs =>
+            setInternalSignals <= '0';
+            reset <= '0';
+            for i in 0 to 1611 loop
+                currentJobs(i).observed <= false;
+            end loop;
+            stateTracker <= FilterWriteSnapshots;
         when FilterWriteSnapshots =>
             setInternalSignals <= '0';
+            reset <= '0';
+            if writeSnapshotJobs(0).observed then
+                currentJobs(0) <= writeSnapshotJobs(0);
+                currentJobIndex := 1;
+            else
+                currentJobIndex := 0;
+            end if;
             for i in 1 to 1611 loop
                 if writeSnapshotJobs(i).observed then
-                    for j in 0 to i - 1 loop
-                        if writeSnapshotJobs(j).observed then
+                    w_loop: for j in 0 to i - 1 loop
+                        if writeSnapshotJobs(j).observed and writeSnapshotJobs(j).executeOnEntry = writeSnapshotJobs(i).executeOnEntry then
                             case writeSnapshotJobs(i).currentState is
                                 when STATE_Initial =>
-                                    if writeSnapshotJobs(j).executeOnEntry = writeSnapshotJobs(i).executeOnEntry then
-                                        writeSnapshotJobs(i).observed <= false;
-                                        exit;
-                                    end if;
+                                    writeSnapshotJobs(i).observed <= false;
+                                    exit w_loop;
                                 when STATE_FROff =>
-                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(j).heat = writeSnapshotJobs(i).heat and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
+                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(j).heat = writeSnapshotJobs(i).heat and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
                                         writeSnapshotJobs(i).observed <= false;
-                                        exit;
+                                        exit w_loop;
                                     end if;
                                 when STATE_FROn =>
-                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(i).executeOnEntry = writeSnapshotJobs(j).executeOnEntry and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
+                                    if writeSnapshotJobs(j).demand = writeSnapshotJobs(i).demand and writeSnapshotJobs(j).relayOn = writeSnapshotJobs(i).relayOn then
                                         writeSnapshotJobs(i).observed <= false;
-                                        exit;
+                                        exit w_loop;
                                     end if;
                             end case;
+                        elsif j = i - 1 then
+                            currentJobs(currentJobIndex) <= writeSnapshotJobs(i);
+                            currentJobIndex := currentJobIndex + 1;
                         end if;
-                    end loop;
+                    end loop w_loop;
                 end if;
             end loop;
             stateTracker <= CalculateEdgeSetup;
