@@ -341,15 +341,11 @@ if rising_edge(clk) then
             setInternalSignals <= '1';
             for c2 in 0 to 1611 loop
                 if c2 = 1611 and currentJobs(c2).observed = false then
-                    for i in 0 to 1611 loop
-                        currentJobs(i).internalState <= WriteSnapshot; -- Incorrect. Should use global internalState variable.
-                    end loop;
+                    internalState <= WriteSnapshot;
                     stateTracker <= CalculateEdgeSetup;
                 elsif currentJobs(c2).observed then
                     stateTracker <= StartExecution;
-                    for i in 0 to 1611 loop
-                        currentJobs(i).internalState <= ReadSnapshot; -- Incorrect. Should use global internalState variable.
-                    end loop;
+                    internalState <= ReadSnapshot;
                     exit;
                 end if;
             end loop;
@@ -363,17 +359,12 @@ if rising_edge(clk) then
             stateTracker <= WaitForWriteSnapshot;
         when WaitForWriteSnapshot =>
             setInternalSignals <= '0';
-            internalState <= internalStateOut;
             if internalStateOut = WriteSnapshot then
                 reset <= '0';
                 stateTracker <= UpdateWriteSnapshots;
             else
                 reset <= '1';
             end if;
-            for i in 0 to 1611 loop
-                currentJobs(i).targetStateIn <= currentJobs(i).targetStateOut;
-                currentJobs(i).currentState <= currentJobs(i).currentStateOut;
-            end loop;
         when UpdateWriteSnapshots =>
             initialReadIndex := -1;
             frOffReadIndex := -1;
@@ -486,7 +477,7 @@ if rising_edge(clk) then
                                 end if;
                             end loop;
                         when others =>
-                            hasError := true;
+                            null;
                     end case;
                 end if;
             end loop;
