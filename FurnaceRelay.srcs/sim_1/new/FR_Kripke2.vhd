@@ -211,7 +211,7 @@ if rising_edge(clk) then
                                 end if;
                             end loop s_loop3;
                         when others =>
-                            hasError := true;
+                            null;
                     end case;
                 end loop;
                 if hasError then
