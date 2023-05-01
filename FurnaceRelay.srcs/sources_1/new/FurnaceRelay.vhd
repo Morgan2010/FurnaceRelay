@@ -144,7 +144,10 @@ begin
                         currentState <= targetState;
                         FurnaceRelay_currentStateOut <= targetState;
                     when others =>
-                        null;
+                        FurnaceRelay_internalStateOut <= internalState;
+                        FurnaceRelay_currentStateOut <= currentState;
+                        FurnaceRelay_previousRingletOut <= previousRinglet;
+                        FurnaceRelay_targetStateOut <= targetState;
                 end case;
             else
                 if setInternalSignals = '1' then

@@ -45,8 +45,8 @@ architecture Behavioral of FR_Kripke2 is
     signal currentJobs: DataStore_t;
     signal writeSnapshotJobs: DataStore_t;
     signal reset: std_logic := '0';
-    signal internalState: std_logic_vector(2 downto 0);
-    signal internalStateOut: std_logic_vector(2 downto 0);
+--    signal internalState: std_logic_vector(2 downto 0);
+--    signal internalStateOut: std_logic_vector(2 downto 0);
     
     signal initialReadsnapshots: Initial_ReadSnapshots_t;
     signal frOffReadSnapshots: FROff_ReadSnapshots_t;
@@ -118,11 +118,11 @@ begin
             FurnaceRelay_heat => currentJobs(i).fr_heat,
             FurnaceRelay_currentStateIn => currentJobs(i).currentState,
             FurnaceRelay_previousRingletIn => currentJobs(i).previousRinglet,
-            FurnaceRelay_internalStateIn => internalState,
+            FurnaceRelay_internalStateIn => currentJobs(i).internalState,
             FurnaceRelay_currentStateOut => currentJobs(i).currentStateOut,
             FurnaceRelay_targetStateIn => currentJobs(i).targetStateIn,
             FurnaceRelay_targetStateOut => currentJobs(i).targetStateOut,
-            FurnaceRelay_internalStateOut => internalStateOut,
+            FurnaceRelay_internalStateOut => currentJobs(i).internalStateOut,
             setInternalSignals => setInternalSignals,
             reset => reset
         );
@@ -227,6 +227,7 @@ if rising_edge(clk) then
                 currentJobs(0).demand <= allJobs(0).demand;
                 currentJobs(0).heat <= allJobs(0).heat;
                 currentJobs(0).currentState <= allJobs(0).currentState;
+                currentJobs(0).internalState <= ReadSnapshot;
                 currentJobs(0).previousRinglet <= allJobs(0).previousRinglet;
                 currentJobs(0).targetStateIn <= allJobs(0).targetStateIn;
                 currentJobs(0).executeOnEntry <= allJobs(0).executeOnEntry;
@@ -255,6 +256,7 @@ if rising_edge(clk) then
                             currentJobs(currentJobIndex).demand <= allJobs(i).demand;
                             currentJobs(currentJobIndex).heat <= allJobs(i).heat;
                             currentJobs(currentJobIndex).currentState <= allJobs(i).currentState;
+                            currentJobs(currentJobIndex).internalState <= ReadSnapshot;
                             currentJobs(currentJobIndex).previousRinglet <= allJobs(i).previousRinglet;
                             currentJobs(currentJobIndex).targetStateIn <= allJobs(i).targetStateIn;
                             currentJobs(currentJobIndex).executeOnEntry <= allJobs(i).executeOnEntry;
@@ -279,7 +281,6 @@ if rising_edge(clk) then
             frOnReadIndex := -1;
             reset <= '0';
             setInternalSignals <= '1';
-            internalState <= ReadSnapshot;
             for c in 0 to 1611 loop
                 allJobs(c).observed <= false;
                 if currentJobs(c).observed then
@@ -341,11 +342,15 @@ if rising_edge(clk) then
             setInternalSignals <= '1';
             for c2 in 0 to 1611 loop
                 if c2 = 1611 and currentJobs(c2).observed = false then
-                    internalState <= WriteSnapshot;
+                    for cj in 0 to 1611 loop
+                        currentJobs(cj).internalState <= WriteSnapshot;
+                    end loop;
                     stateTracker <= CalculateEdgeSetup;
                 elsif currentJobs(c2).observed then
+                    for cj in 0 to 1611 loop
+                        currentJobs(cj).internalState <= ReadSnapshot;
+                    end loop;
                     stateTracker <= StartExecution;
-                    internalState <= ReadSnapshot;
                     exit;
                 end if;
             end loop;
@@ -359,12 +364,13 @@ if rising_edge(clk) then
             stateTracker <= WaitForWriteSnapshot;
         when WaitForWriteSnapshot =>
             setInternalSignals <= '0';
-            if internalStateOut = WriteSnapshot then
-                reset <= '0';
-                stateTracker <= UpdateWriteSnapshots;
-            else
-                reset <= '1';
-            end if;
+            for cj in 0 to 1611 loop
+                if currentJobs(cj).observed and currentJobs(cj).internalStateOut = WriteSnapshot then
+                    reset <= '0';
+                    stateTracker <= UpdateWriteSnapshots;
+                    exit;
+                end if;
+            end loop;
         when UpdateWriteSnapshots =>
             initialReadIndex := -1;
             frOffReadIndex := -1;
