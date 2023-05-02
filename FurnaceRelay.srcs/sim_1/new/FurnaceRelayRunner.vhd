@@ -47,7 +47,6 @@ port (
     relayOn: out std_logic;
     fr_demand: out std_logic_vector(1 downto 0);
     fr_heat: out std_logic;
-    fr_relayOn: out std_logic;
     reset: in std_logic;
     goalInternalState: in std_logic_vector(2 downto 0);
     finished: out boolean := true
@@ -114,19 +113,20 @@ begin
 if rising_edge(clk) then
 case stateTracker is
     when WaitToStart =>
-        if reset = '1' then
+        if reset = '0' then
             setInternalSignals <= '1';
             stateTracker <= StartExecuting;
             goalInternal <= goalInternalState;
+            finished <= false;
         end if;
     when StartExecuting =>
-        rst <= '0';
+        rst <= '1';
         setInternalSignals <= '0';
         stateTracker <= Executing;
         finished <= false;
     when Executing =>
         if internalState = goalInternalState then
-            rst <= '1';
+            rst <= '0';
             finished <= true;
             stateTracker <= WaitToStart;
         end if;
