@@ -121,6 +121,13 @@ if (rising_edge(clk)) then
                 targetStateIn <= targetStateOut;
                 internalStateIn <= internalStateOut;
                 goalInternalState <= WriteSnapshot;
+                if currentStateOut = "01" then
+                    demand <= "10";
+                    heat <= '1';
+                else
+                    demand <= "01";
+                    heat <= '0';
+                end if;
             else
                 goalInternalState <= ReadSnapshot;
             end if;
