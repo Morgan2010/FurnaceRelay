@@ -91,12 +91,11 @@ package FR_KripkeTypes2 is
         writeSnapshotState: WriteSnapshot_t;
         nextState: std_logic_vector(1 downto 0);
         finished: boolean;
-        observed: boolean;
     end record RunnerParameters_t;
     
     type Runners_t is array(0 to 1611) of RunnerParameters_t;
     
-    
+    type CurrentJobs_t is array(0 to 1611) of boolean;
     
     
     constant STATE_Initial: std_logic_vector(1 downto 0) := "00";

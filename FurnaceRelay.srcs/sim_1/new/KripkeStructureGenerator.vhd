@@ -61,9 +61,10 @@ architecture Behavioral of KripkeStructureGenerator is
             executeOnEntry => true
         ),
         nextState => "00",
-        finished => true,
-        observed => false
+        finished => true
     ));
+    
+    signal currentJobs: CurrentJobs_t := (others => false);
 
     component RingletRunner is
     port(
@@ -117,7 +118,7 @@ begin
 if rising_edge(clk) then
     case genTracker is
         when Setup =>
-            runners(0).observed <= true;
+            currentJobs(0) <= true;
             genTracker <= StartExecuting;
         when StartExecuting =>
             reset <= '1';
@@ -127,7 +128,7 @@ if rising_edge(clk) then
             genTracker <= WaitUntilFinish;
         when WaitUntilFinish =>
             for i in 0 to 1611 loop
-                if runners(i).observed then
+                if currentJobs(i) then
                     if runners(i).finished then
                         genTracker <= UpdateKripkeStates;
                     end if;
@@ -135,7 +136,7 @@ if rising_edge(clk) then
             end loop;
         when UpdateKripkeStates =>
             for i in 0 to 1611 loop
-                if runners(i).observed then
+                if currentJobs(i) then
                     case runners(i).state is
                         when STATE_Initial =>
                             -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
@@ -183,7 +184,7 @@ if rising_edge(clk) then
                             else
                                 -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
                                 for rsi in 0 to (i - 1) loop
-                                    if runners(rsi).observed and (runners(rsi).readSnapshotState = runners(i).readSnapshotState) then
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState = runners(i).readSnapshotState) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for rs in 0 to 1 loop
@@ -199,7 +200,7 @@ if rising_edge(clk) then
                                             end if;
                                         end loop;
                                     end if;
-                                    if runners(rsi).observed and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
+                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for ws in 0 to 1 loop
