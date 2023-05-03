@@ -24,6 +24,21 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 package FR_KripkeTypes2 is
 
+    type ReadSnapshot_t is record
+        demand: std_logic_vector(1 downto 0);
+        heat: std_logic;
+        state: std_logic_vector(1 downto 0);
+        executeOnEntry: boolean;
+    end record ReadSnapshot_t;
+        
+    type WriteSnapshot_t is record
+        demand: std_logic_vector(1 downto 0);
+        heat: std_logic;
+        relayOn: std_logic;
+        state: std_logic_vector(1 downto 0);
+        executeOnEntry: boolean;
+    end record WriteSnapshot_t;
+
     type TotalSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
         heat: std_logic;
