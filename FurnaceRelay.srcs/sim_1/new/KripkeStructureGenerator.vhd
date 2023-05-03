@@ -138,46 +138,101 @@ if rising_edge(clk) then
                 if runners(i).observed then
                     case runners(i).state is
                         when STATE_Initial =>
-                            for rs in 0 to 1 loop
-                                if (initialReadSnapshots(rs).observed and initialReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
-                                    exit;
-                                elsif rs >= initialReadSnapshotIndex and not initialReadSnapshots(rs).observed then
-                                    initialReadSnapshots(rs) <= (
-                                        executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
-                                        observed => true
-                                    );
-                                    initialReadSnapshotIndex := initialReadSnapshotIndex + 1;
-                                    exit;
-                                end if;
-                            end loop;
-                            for ws in 0 to 1 loop
-                                if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
-                                    exit;
-                                elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
-                                    initialWriteSnapshots(ws) <= (
-                                        executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                        observed => true
-                                    );
-                                    initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
-                                    exit;
-                                end if;
-                            end loop;
-                            for ed in 0 to 1 loop
-                                if (initialEdges(ed).observed and initialEdges(ed).writeSnapshot = (executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true) and initialEdges(ed).nextState = runners(i).nextState) then
-                                    exit;
-                                elsif ed >= initialEdgeIndex and not initialEdges(ed).observed then
-                                    initialEdges(ed) <= (
-                                        writeSnapshot => (
+                            -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
+                            if i = 0 then
+                                for rs in 0 to 1 loop
+                                    if (initialReadSnapshots(rs).observed and initialReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                        exit;
+                                    elsif rs >= initialReadSnapshotIndex and not initialReadSnapshots(rs).observed then
+                                        initialReadSnapshots(rs) <= (
+                                            executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                            observed => true
+                                        );
+                                        initialReadSnapshotIndex := initialReadSnapshotIndex + 1;
+                                        exit;
+                                    end if;
+                                end loop;
+                                for ws in 0 to 1 loop
+                                    if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                        exit;
+                                    elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
+                                        initialWriteSnapshots(ws) <= (
                                             executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                             observed => true
-                                        ),
-                                        nextState => runners(i).nextState,
-                                        observed => true
-                                    );
-                                    initialEdgeIndex := initialEdgeIndex + 1;
-                                    exit;
-                                end if;
-                            end loop;
+                                        );
+                                        initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
+                                        exit;
+                                    end if;
+                                end loop;
+                                for ed in 0 to 1 loop
+                                    if (initialEdges(ed).observed and initialEdges(ed).writeSnapshot = (executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true) and initialEdges(ed).nextState = runners(i).nextState) then
+                                        exit;
+                                    elsif ed >= initialEdgeIndex and not initialEdges(ed).observed then
+                                        initialEdges(ed) <= (
+                                            writeSnapshot => (
+                                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                observed => true
+                                            ),
+                                            nextState => runners(i).nextState,
+                                            observed => true
+                                        );
+                                        initialEdgeIndex := initialEdgeIndex + 1;
+                                        exit;
+                                    end if;
+                                end loop;
+                            else
+                                -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
+                                for rsi in 0 to (i - 1) loop
+                                    if runners(rsi).observed and (runners(rsi).readSnapshotState = runners(i).readSnapshotState) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for rs in 0 to 1 loop
+                                            if (initialReadSnapshots(rs).observed and initialReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                                exit;
+                                            elsif rs >= initialReadSnapshotIndex and not initialReadSnapshots(rs).observed then
+                                                initialReadSnapshots(rs) <= (
+                                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                                    observed => true
+                                                );
+                                                initialReadSnapshotIndex := initialReadSnapshotIndex + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                    end if;
+                                    if runners(rsi).observed and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for ws in 0 to 1 loop
+                                            if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                                exit;
+                                            elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
+                                                initialWriteSnapshots(ws) <= (
+                                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                    observed => true
+                                                );
+                                                initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                        for ed in 0 to 1 loop
+                                            if (initialEdges(ed).observed and initialEdges(ed).writeSnapshot = (executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true) and initialEdges(ed).nextState = runners(i).nextState) then
+                                                exit;
+                                            elsif ed >= initialEdgeIndex and not initialEdges(ed).observed then
+                                                initialEdges(ed) <= (
+                                                    writeSnapshot => (
+                                                        executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                        observed => true
+                                                    ),
+                                                    nextState => runners(i).nextState,
+                                                    observed => true
+                                                );
+                                                initialEdgeIndex := initialEdgeIndex + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                    end if;
+                                end loop;
+                            end if;
                         when others =>
                             null;
                     end case;
