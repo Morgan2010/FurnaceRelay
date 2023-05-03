@@ -46,7 +46,7 @@ architecture Behavioral of KripkeStructureGenerator is
         state => "00",
         demand => "00",
         heat => '0',
-        previousRinglet => "00",
+        previousRinglet => "ZZ",
         readSnapshotState => (
             demand => "00",
             heat => '0',
@@ -84,6 +84,7 @@ architecture Behavioral of KripkeStructureGenerator is
     constant StartExecuting: std_logic_vector(3 downto 0) := "0001";
     constant WaitUntilFinish: std_logic_vector(3 downto 0) := "0010";
     constant UpdateKripkeStates: std_logic_vector(3 downto 0) := "0011";
+    constant WaitUntilStart: std_logic_vector(3 downto 0) := "0100";
     
     signal genTracker: std_logic_vector(3 downto 0) := Setup;
 
@@ -118,6 +119,9 @@ if rising_edge(clk) then
             genTracker <= StartExecuting;
         when StartExecuting =>
             reset <= '1';
+            genTracker <= WaitUntilStart;
+        when WaitUntilStart =>
+            reset <= '0';
             genTracker <= WaitUntilFinish;
         when WaitUntilFinish =>
             for i in 0 to 1611 loop
@@ -127,7 +131,6 @@ if rising_edge(clk) then
                     end if;
                 end if;
             end loop;
-            reset <= '0';
         when UpdateKripkeStates =>
             for i in 0 to 1611 loop
                 if runners(i).observed then
