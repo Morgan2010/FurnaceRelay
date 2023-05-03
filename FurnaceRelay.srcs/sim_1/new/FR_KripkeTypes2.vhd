@@ -97,6 +97,14 @@ package FR_KripkeTypes2 is
     
     type CurrentJobs_t is array(0 to 1611) of boolean;
     
+    type ObservedState_t is record
+        state: std_logic_vector(1 downto 0);
+        executeOnEntry: boolean;
+        observed: boolean;
+    end record ObservedState_t;
+    
+    type AllStates_t is array(0 to 5) of ObservedState_t;
+    
     
     constant STATE_Initial: std_logic_vector(1 downto 0) := "00";
     constant STATE_FROff: std_logic_vector(1 downto 0) := "01";

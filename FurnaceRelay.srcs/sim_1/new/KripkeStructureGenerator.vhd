@@ -90,6 +90,9 @@ architecture Behavioral of KripkeStructureGenerator is
     constant ClearJobs: std_logic_vector(3 downto 0) := "0110";
     
     signal genTracker: std_logic_vector(3 downto 0) := Setup;
+    
+    signal observedStates: AllStates_t;
+    signal pendingStates: AllStates_t;
 
 begin
 
@@ -114,6 +117,7 @@ process(clk)
 variable initialReadSnapshotIndex: integer range 0 to 1 := 0;
 variable initialWriteSnapshotIndex: integer range 0 to 1 := 0;
 variable initialEdgeIndex: integer range 0 to 1 := 0;
+variable observedStatesIndex: integer range 0 to 2 := 0;
 begin
 if rising_edge(clk) then
     case genTracker is
@@ -181,6 +185,15 @@ if rising_edge(clk) then
                                         exit;
                                     end if;
                                 end loop;
+                                for os in 0 to 2 loop
+                                    if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = (runners(i).previousRinglet /= runners(i).state) then
+                                        exit;
+                                    elsif os >= observedStatesIndex and not observedStates(os).observed then
+                                        observedStates(os) <= (state => runners(i).state, executeOnEntry => (runners(i).previousRinglet /= runners(i).state), observed => true);
+                                        observedStatesIndex := observedStatesIndex + 1;
+                                        exit;
+                                    end if;
+                                end loop;
                             else
                                 -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
                                 for rsi in 0 to (i - 1) loop
@@ -232,6 +245,19 @@ if rising_edge(clk) then
                                             end if;
                                         end loop;
                                     end if;
+                                    if currentJobs(rsi) and (runners(rsi).state = runners(i).state) and ((runners(rsi).previousRinglet /= runners(rsi).state) = (runners(i).previousRinglet /= runners(i).state)) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for os in 0 to 2 loop
+                                            if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = (runners(i).previousRinglet /= runners(i).state) then
+                                                exit;
+                                            elsif os >= observedStatesIndex and not observedStates(os).observed then
+                                                observedStates(os) <= (state => runners(i).state, executeOnEntry => (runners(i).previousRinglet /= runners(i).state), observed => true);
+                                                observedStatesIndex := observedStatesIndex + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                    end if;
                                 end loop;
                             end if;
                         when others =>
@@ -240,11 +266,9 @@ if rising_edge(clk) then
                 end if;
             end loop;
             genTracker <= ClearJobs;
---        when ClearJobs =>
---            for i in 0 to 1611 loop
---                runners(i).observed <= false;
---            end loop;
---            genTracker <= ChooseNextState;
+        when ClearJobs =>
+            currentJobs <= (others => false);
+            genTracker <= ChooseNextState;
         when others =>
             null;
     end case;
