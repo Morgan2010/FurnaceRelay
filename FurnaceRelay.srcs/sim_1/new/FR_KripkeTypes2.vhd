@@ -83,10 +83,6 @@ package FR_KripkeTypes2 is
     type Initial_Edges_t is array(0 to 1) of Initial_Edge_t;
     
     type RunnerParameters_t is record
-        state: std_logic_vector(1 downto 0);
-        demand: std_logic_vector(1 downto 0);
-        heat: std_logic;
-        previousRinglet: std_logic_vector(1 downto 0);
         readSnapshotState: ReadSnapshot_t;
         writeSnapshotState: WriteSnapshot_t;
         nextState: std_logic_vector(1 downto 0);
@@ -104,6 +100,9 @@ package FR_KripkeTypes2 is
     end record ObservedState_t;
     
     type AllStates_t is array(0 to 5) of ObservedState_t;
+    type States_t is array(0 to 1611) of std_logic_vector(1 downto 0);
+    type Demands_t is array(0 to 1611) of std_logic_vector(1 downto 0);
+    type Heats_t is array(0 to 1611) of std_logic;
     
     
     constant STATE_Initial: std_logic_vector(1 downto 0) := "00";

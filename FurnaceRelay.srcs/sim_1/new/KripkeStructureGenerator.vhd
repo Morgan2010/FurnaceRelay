@@ -22,6 +22,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use work.FR_KripkeTypes2.all;
+use work.KripkePrimitiveTypes.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -43,10 +44,6 @@ architecture Behavioral of KripkeStructureGenerator is
     signal initialEdges: Initial_Edges_t;
     signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
-        state => "00",
-        demand => "00",
-        heat => '0',
-        previousRinglet => "ZZ",
         readSnapshotState => (
             demand => "00",
             heat => '0',
@@ -94,6 +91,10 @@ architecture Behavioral of KripkeStructureGenerator is
     
     signal observedStates: AllStates_t;
     signal pendingStates: AllStates_t;
+    signal states: States_t := (others => STATE_Initial);
+    signal demands: Demands_t := (others => "00");
+    signal heats: Heats_t := (others => '0');
+    signal previousRinglets: States_t := (others => "ZZ");
 
 begin
 
@@ -103,10 +104,10 @@ run_gen: for i in 0 to 1611 generate
     run_inst: RingletRunner port map(
         clk => clk,
         reset => reset,
-        state => runners(i).state,
-        demand => runners(i).demand,
-        heat => runners(i).heat,
-        previousRinglet => runners(i).previousRinglet,
+        state => states(i),
+        demand => demands(i),
+        heat => heats(i),
+        previousRinglet => previousRinglets(i),
         readSnapshotState => runners(i).readSnapshotState,
         writeSnapshotState => runners(i).writeSnapshotState,
         nextState => runners(i).nextState,
@@ -147,7 +148,7 @@ if rising_edge(clk) then
         when UpdateKripkeStates =>
             for i in 0 to 1611 loop
                 if currentJobs(i) then
-                    case runners(i).state is
+                    case states(i) is
                         when STATE_Initial =>
                             -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
                             if i = 0 then
@@ -192,21 +193,21 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for os in 0 to 5 loop
-                                    if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                    if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => runners(i).state, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                        observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                         observedStatesIndex := observedStatesIndex + 1;
                                         exit;
                                     end if;
                                 end loop;
                                 for ps in 0 to 5 loop
-                                    if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (runners(i).previousRinglet /= runners(i).nextState) then
+                                    if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (states(i) /= runners(i).nextState) then
                                         exit;
                                     elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
                                         pendingStates(ps) <= (
                                             state => runners(i).nextState,
-                                            executeOnEntry => runners(i).previousRinglet /= runners(i).nextState,
+                                            executeOnEntry => states(i) /= runners(i).nextState,
                                             observed => true
                                         );
                                         pendingStatesIndex := pendingStatesIndex + 1;
@@ -264,29 +265,29 @@ if rising_edge(clk) then
                                             end if;
                                         end loop;
                                     end if;
-                                    if currentJobs(rsi) and (runners(rsi).state = runners(i).state) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                    if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for os in 0 to 5 loop
-                                            if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                            if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                                observedStates(os) <= (state => runners(i).state, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                                observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                                 observedStatesIndex := observedStatesIndex + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
-                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((runners(rsi).previousRinglet /= runners(rsi).nextState) = (runners(i).previousRinglet /= runners(i).nextState)) then
+                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for ps in 0 to 5 loop
-                                            if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (runners(i).previousRinglet /= runners(i).nextState) then
+                                            if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (states(i) /= runners(i).nextState) then
                                                 exit;
                                             elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
                                                 pendingStates(ps) <= (
                                                     state => runners(i).nextState,
-                                                    executeOnEntry => runners(i).previousRinglet /= runners(i).nextState,
+                                                    executeOnEntry => states(i) /= runners(i).nextState,
                                                     observed => true
                                                 );
                                                 pendingStatesIndex := pendingStatesIndex + 1;
@@ -320,12 +321,28 @@ if rising_edge(clk) then
                     case pendingStates(s).state is
                         when STATE_Initial =>
                             currentJobs(0) <= true;
-                            runners(0).state <= STATE_Initial;
+                            states(0) <= STATE_Initial;
                             if pendingStates(s).executeOnEntry then
-                                runners(0).previousRinglet <= "ZZ";
+                                previousRinglets(0) <= "ZZ";
                             else
-                                runners(0).previousRinglet <= STATE_Initial;
+                                previousRinglets(0) <= STATE_Initial;
                             end if;
+                        when STATE_FROff =>
+                            for i in 0 to 8 loop
+                                for j in 0 to 8 loop
+                                    for k in 0 to 8 loop
+                                        states(i * 81 + j * 9 + k) <= STATE_FROff;
+                                        demands(i * 81 + j * 9 + k) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
+                                        heats(i * 81 + j * 9 + k) <= stdLogicTypes(k);
+                                        if pendingStates(s).executeOnEntry then
+                                            previousRinglets(i * 81 + j * 9 + k) <= "ZZ";
+                                        else
+                                            previousRinglets(i * 81 + j * 9 + k) <= STATE_FROff;
+                                        end if;
+                                        currentJobs(i * 81 + j * 9 + k) <= true;
+                                    end loop;
+                                end loop;
+                            end loop;
                         when others =>
                             null;
                     end case;
