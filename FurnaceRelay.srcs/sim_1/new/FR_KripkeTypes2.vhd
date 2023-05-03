@@ -59,5 +59,49 @@ package FR_KripkeTypes2 is
         executeOnEntry: boolean;
         observed: boolean;
     end record TotalSnapshot_t;
+    
+    type Initial_ReadSnapshot_t is record
+        executeOnEntry: boolean;
+        observed: boolean;
+    end record Initial_ReadSnapshot_t;
+    
+    type Initial_ReadSnapshots_t is array(0 to 1) of Initial_ReadSnapshot_t;
+    
+    type Initial_WriteSnapshot_t is record
+        executeOnEntry: boolean;
+        observed: boolean;
+    end record Initial_WriteSnapshot_t;
+    
+    type Initial_WriteSnapshots_t is array(0 to 1) of Initial_WriteSnapshot_t;
+    
+    type Initial_Edge_t is record
+        writeSnapshot: Initial_WriteSnapshot_t;
+        nextState: std_logic_vector(1 downto 0);
+        observed: boolean;
+    end record Initial_Edge_t;
+    
+    type Initial_Edges_t is array(0 to 1) of Initial_Edge_t;
+    
+    type RunnerParameters_t is record
+        reset: std_logic;
+        state: std_logic_vector(1 downto 0);
+        demand: std_logic_vector(1 downto 0);
+        heat: std_logic;
+        previousRinglet: std_logic_vector(1 downto 0);
+        readSnapshotState: ReadSnapshot_t;
+        writeSnapshotState: WriteSnapshot_t;
+        nextState: std_logic_vector(1 downto 0);
+        finished: boolean;
+        observed: boolean;
+    end record RunnerParameters_t;
+    
+    type Runners_t is array(0 to 1611) of RunnerParameters_t;
+    
+    
+    
+    
+    constant STATE_Initial: std_logic_vector(1 downto 0) := "00";
+    constant STATE_FROff: std_logic_vector(1 downto 0) := "01";
+    constant STATE_FROn: std_logic_vector(1 downto 0) := "10";
 
 end package FR_KripkeTypes2;

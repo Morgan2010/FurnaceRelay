@@ -53,23 +53,23 @@ architecture Behavioral of RingletRunner is
     constant WriteSnapshot: std_logic_vector(2 downto 0) := "110";
 
     signal machine: TotalSnapshot_t := (
-        demand => demand,
-        heat => heat,
+        demand => "00",
+        heat => '0',
         relayOn => '0',
-        fr_demand => demand,
-        fr_heat => heat,
-        currentStateIn => state,
-        currentStateOut => state,
-        previousRingletIn => previousRinglet,
-        previousRingletOut => previousRinglet,
+        fr_demand => "00",
+        fr_heat => '0',
+        currentStateIn => "00",
+        currentStateOut => "00",
+        previousRingletIn => "00",
+        previousRingletOut => "00",
         internalStateIn => ReadSnapshot,
         internalStateOut => ReadSnapshot,
-        targetStateIn => state,
-        targetStateOut => state,
-        reset => reset,
+        targetStateIn => "00",
+        targetStateOut => "00",
+        reset => '0',
         goalInternalState => WriteSnapshot,
         finished => true,
-        executeOnEntry => state /= previousRinglet,
+        executeOnEntry => true,
         observed => false
     );
 
