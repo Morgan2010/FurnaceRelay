@@ -186,10 +186,10 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for os in 0 to 2 loop
-                                    if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = (runners(i).previousRinglet /= runners(i).state) then
+                                    if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => runners(i).state, executeOnEntry => (runners(i).previousRinglet /= runners(i).state), observed => true);
+                                        observedStates(os) <= (state => runners(i).state, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                         observedStatesIndex := observedStatesIndex + 1;
                                         exit;
                                     end if;
@@ -245,14 +245,14 @@ if rising_edge(clk) then
                                             end if;
                                         end loop;
                                     end if;
-                                    if currentJobs(rsi) and (runners(rsi).state = runners(i).state) and ((runners(rsi).previousRinglet /= runners(rsi).state) = (runners(i).previousRinglet /= runners(i).state)) then
+                                    if currentJobs(rsi) and (runners(rsi).state = runners(i).state) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for os in 0 to 2 loop
-                                            if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = (runners(i).previousRinglet /= runners(i).state) then
+                                            if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                                observedStates(os) <= (state => runners(i).state, executeOnEntry => (runners(i).previousRinglet /= runners(i).state), observed => true);
+                                                observedStates(os) <= (state => runners(i).state, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                                 observedStatesIndex := observedStatesIndex + 1;
                                                 exit;
                                             end if;
@@ -268,6 +268,15 @@ if rising_edge(clk) then
             genTracker <= ClearJobs;
         when ClearJobs =>
             currentJobs <= (others => false);
+            for j in 0 to 5 loop
+                for p in 0 to 5 loop
+                    if pendingStates(p).observed then
+                        if pendingStates(p) = observedStates(j) then
+                            pendingStates(p).observed <= false;
+                        end if;
+                    end if;
+                end loop;
+            end loop;
             genTracker <= ChooseNextState;
         when others =>
             null;
