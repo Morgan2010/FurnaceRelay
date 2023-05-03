@@ -117,7 +117,8 @@ process(clk)
 variable initialReadSnapshotIndex: integer range 0 to 1 := 0;
 variable initialWriteSnapshotIndex: integer range 0 to 1 := 0;
 variable initialEdgeIndex: integer range 0 to 1 := 0;
-variable observedStatesIndex: integer range 0 to 2 := 0;
+variable observedStatesIndex: integer range 0 to 5 := 0;
+variable pendingStatesIndex: integer range 0 to 5 := 0;
 begin
 if rising_edge(clk) then
     case genTracker is
@@ -185,12 +186,25 @@ if rising_edge(clk) then
                                         exit;
                                     end if;
                                 end loop;
-                                for os in 0 to 2 loop
+                                for os in 0 to 5 loop
                                     if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
                                         observedStates(os) <= (state => runners(i).state, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                         observedStatesIndex := observedStatesIndex + 1;
+                                        exit;
+                                    end if;
+                                end loop;
+                                for ps in 0 to 5 loop
+                                    if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (runners(i).previousRinglet /= runners(i).nextState) then
+                                        exit;
+                                    elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                        pendingStates(ps) <= (
+                                            state => runners(i).nextState,
+                                            executeOnEntry => runners(i).previousRinglet /= runners(i).nextState,
+                                            observed => true
+                                        );
+                                        pendingStatesIndex := pendingStatesIndex + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -248,12 +262,29 @@ if rising_edge(clk) then
                                     if currentJobs(rsi) and (runners(rsi).state = runners(i).state) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
-                                        for os in 0 to 2 loop
+                                        for os in 0 to 5 loop
                                             if observedStates(os).observed and observedStates(os).state = runners(i).state and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
                                                 observedStates(os) <= (state => runners(i).state, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                                 observedStatesIndex := observedStatesIndex + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                    end if;
+                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((runners(rsi).previousRinglet /= runners(rsi).nextState) = (runners(i).previousRinglet /= runners(i).nextState)) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for ps in 0 to 5 loop
+                                            if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (runners(i).previousRinglet /= runners(i).nextState) then
+                                                exit;
+                                            elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                                pendingStates(ps) <= (
+                                                    state => runners(i).nextState,
+                                                    executeOnEntry => runners(i).previousRinglet /= runners(i).nextState,
+                                                    observed => true
+                                                );
+                                                pendingStatesIndex := pendingStatesIndex + 1;
                                                 exit;
                                             end if;
                                         end loop;
