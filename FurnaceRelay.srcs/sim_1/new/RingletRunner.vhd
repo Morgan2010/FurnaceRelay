@@ -42,7 +42,6 @@ port(
     previousRinglet: in std_logic_vector(1 downto 0) := "ZZ";
     readSnapshotState: out ReadSnapshot_t;
     writeSnapshotState: out WriteSnapshot_t;
-    ringletLength: out integer range 0 to 5;
     nextState: out std_logic_vector(1 downto 0);
     finished: out boolean := true
 );
@@ -79,7 +78,6 @@ architecture Behavioral of RingletRunner is
     constant Executing: std_logic := '1';
     signal currentExecuteOnEntry: boolean := true;
     signal currentState: std_logic_vector(1 downto 0) := "00";
-    signal clkCount: integer range 0 to 8;
     
     component FurnaceRelayRunner is
     port (
@@ -139,7 +137,6 @@ case tracker is
                 state => state,
                 executeOnEntry => previousRinglet /= state
             );
-            clkCount <= 1;
             finished <= false;
         else
             machine.demand <= demand;
@@ -162,12 +159,9 @@ case tracker is
                 state => currentState,
                 executeOnEntry => currentExecuteOnEntry
             );
-            ringletLength <= clkCount; -- Correct for switching time: 1 clock cycle start ringletRunner + 1 clock cycle start machine + 1 clock cycle end machine + 1 clock cycle end ringletRunner.
             nextState <= machine.currentStateOut;
             finished <= true;
             tracker <= WaitForStart;
-        else
-            clkCount <= clkCount + 1;
         end if;
     when others =>
         null;

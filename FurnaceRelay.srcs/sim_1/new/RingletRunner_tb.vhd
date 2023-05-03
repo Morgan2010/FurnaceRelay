@@ -46,7 +46,6 @@ architecture Behavioral of RingletRunner_tb is
     signal previousRinglet: std_logic_vector(1 downto 0) := "ZZ";
     signal readSnapshotState: ReadSnapshot_t;
     signal writeSnapshotState: WriteSnapshot_t;
-    signal ringletLength: integer range 0 to 5;
     signal nextState: std_logic_vector(1 downto 0) := "00";
     signal finished: boolean := true;
     
@@ -66,7 +65,6 @@ architecture Behavioral of RingletRunner_tb is
         previousRinglet: in std_logic_vector(1 downto 0) := "ZZ";
         readSnapshotState: out ReadSnapshot_t;
         writeSnapshotState: out WriteSnapshot_t;
-        ringletLength: out integer range 0 to 5;
         nextState: out std_logic_vector(1 downto 0);
         finished: out boolean := true
     );
@@ -85,7 +83,6 @@ run_inst: RingletRunner port map(
     previousRinglet => previousRinglet,
     readSnapshotState => readSnapshotState,
     writeSnapshotState => writeSnapshotState,
-    ringletLength => ringletLength,
     nextState => nextState,
     finished => finished
 );
