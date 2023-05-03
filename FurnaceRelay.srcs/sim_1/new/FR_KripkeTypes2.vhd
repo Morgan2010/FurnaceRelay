@@ -83,7 +83,6 @@ package FR_KripkeTypes2 is
     type Initial_Edges_t is array(0 to 1) of Initial_Edge_t;
     
     type RunnerParameters_t is record
-        reset: std_logic;
         state: std_logic_vector(1 downto 0);
         demand: std_logic_vector(1 downto 0);
         heat: std_logic;

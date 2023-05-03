@@ -41,8 +41,8 @@ architecture Behavioral of KripkeStructureGenerator is
     signal initialReadSnapshots: Initial_ReadSnapshots_t;
     signal initialWriteSnapshots: Initial_WriteSnapshots_t;
     signal initialEdges: Initial_Edges_t;
+    signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
-        reset => '0',
         state => "00",
         demand => "00",
         heat => '0',
@@ -94,7 +94,7 @@ clk <= not clk after 10ns;
 run_gen: for i in 0 to 1611 generate
     run_inst: RingletRunner port map(
         clk => clk,
-        reset => runners(i).reset,
+        reset => reset,
         state => runners(i).state,
         demand => runners(i).demand,
         heat => runners(i).heat,
@@ -117,21 +117,17 @@ if rising_edge(clk) then
             runners(0).observed <= true;
             genTracker <= StartExecuting;
         when StartExecuting =>
---            for i in 0 to 1611 loop
---                if runners(i).observed then
---                    runners(i).reset <= '1';
---                end if;
---            end loop;
---            genTracker <= WaitUntilFinish;
+            reset <= '1';
+            genTracker <= WaitUntilFinish;
         when WaitUntilFinish =>
---            for i in 0 to 1611 loop
---                if runners(i).observed then
---                    if runners(i).finished then
---                        genTracker <= UpdateKripkeStates;
---                    end if;
---                end if;
---                runners(i).reset <= '0';
---            end loop;
+            for i in 0 to 1611 loop
+                if runners(i).observed then
+                    if runners(i).finished then
+                        genTracker <= UpdateKripkeStates;
+                    end if;
+                end if;
+            end loop;
+            reset <= '0';
         when UpdateKripkeStates =>
             for i in 0 to 1611 loop
                 if runners(i).observed then
