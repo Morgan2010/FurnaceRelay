@@ -124,8 +124,12 @@ begin
 if rising_edge(clk) then
     case genTracker is
         when Setup =>
-            currentJobs(0) <= true;
-            genTracker <= StartExecuting;
+            pendingStates(0) <= (
+                state => STATE_Initial,
+                executeOnEntry => true,
+                observed => true
+            );
+            genTracker <= ChooseNextState;
         when StartExecuting =>
             reset <= '1';
             genTracker <= WaitUntilStart;
@@ -315,6 +319,7 @@ if rising_edge(clk) then
                 if pendingStates(s).observed then
                     case pendingStates(s).state is
                         when STATE_Initial =>
+                            currentJobs(0) <= true;
                             runners(0).state <= STATE_Initial;
                             if pendingStates(s).executeOnEntry then
                                 runners(0).previousRinglet <= "ZZ";
