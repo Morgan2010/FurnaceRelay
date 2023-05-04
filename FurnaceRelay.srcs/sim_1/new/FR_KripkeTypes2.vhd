@@ -94,6 +94,23 @@ package FR_KripkeTypes2 is
     
     type FROff_WriteSnapshots_t is array(0 to 53) of FROff_WriteSnapshot_t;
     
+    type FROn_ReadSnapshot_t is record
+        demand: std_logic_vector(1 downto 0);
+        executeOnEntry: boolean;
+        observed: boolean;
+    end record FROn_ReadSnapshot_t;
+    
+    type FROn_ReadSnapshots_t is array (0 to 161) of FROn_ReadSnapshot_t;
+    
+    type FROn_WriteSnapshot_t is record
+        relayOn: std_logic;
+        nextState: std_logic_vector(1 downto 0);
+        executeOnEntry: boolean;
+        observed: boolean;
+    end record FROn_WriteSnapshot_t;
+    
+    type FROn_WriteSnapshots_t is array (0 to 53) of FROn_WriteSnapshot_t;
+    
     type RunnerParameters_t is record
         readSnapshotState: ReadSnapshot_t;
         writeSnapshotState: WriteSnapshot_t;

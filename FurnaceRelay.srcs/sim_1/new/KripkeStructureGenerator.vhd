@@ -43,6 +43,8 @@ architecture Behavioral of KripkeStructureGenerator is
     signal initialWriteSnapshots: Initial_WriteSnapshots_t;
     signal frOffReadSnapshots: FROff_ReadSnapshots_t;
     signal frOffWriteSnapshots: FROff_WriteSnapshots_t;
+    signal frOnReadSnapshots: FROn_Readsnapshots_t;
+    signal frOnWriteSnapshots: FROn_WriteSnapshots_t;
     signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
         readSnapshotState => (
@@ -123,6 +125,8 @@ variable initialReadSnapshotIndex: integer range 0 to 1 := 0;
 variable initialWriteSnapshotIndex: integer range 0 to 1 := 0;
 variable frOffReadSnapshotIndex: integer range 0 to 1457 := 0;
 variable frOffWriteSnapshotIndex: integer range 0 to 53 := 0;
+variable frOnReadSnapshotIndex: integer range 0 to 161 := 0;
+variable frOnWriteSnapshotIndex: integer range 0 to 53 := 0;
 variable observedStatesIndex: integer range 0 to 5 := 0;
 variable pendingStatesIndex: integer range 0 to 5 := 0;
 begin
@@ -388,6 +392,145 @@ if rising_edge(clk) then
                                                     observed => true
                                                 );
                                                 frOffWriteSnapshotIndex := ws + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                    end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
+                                    if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for os in 0 to 5 loop
+                                            if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                                exit;
+                                            elsif os >= observedStatesIndex and not observedStates(os).observed then
+                                                observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                                observedStatesIndex := os + 1;
+                                                exit;
+                                            end if;
+                                        end loop;
+                                    end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
+                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        -- Check if next state is not the same as the state that was just executed.
+                                        if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                            -- Add to pending states logic.
+                                            for ps in 0 to 5 loop
+                                                -- If already exists in pending state or already exists in observed states, then exit.
+                                                if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or
+                                                    (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                                    exit;
+                                                -- otherwise, add to pending states.
+                                                elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                                    pendingStates(ps) <= (
+                                                        state => runners(i).nextState,
+                                                        executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                        observed => true
+                                                    );
+                                                    pendingStatesIndex := ps + 1;
+                                                    exit;
+                                                end if;
+                                            end loop;
+                                        end if;
+                                    end if;
+                                end loop;
+                            end if;
+                        when STATE_FROn =>
+                            if i = 0 then
+                                for rs in 0 to 161 loop
+                                    if frOnReadSnapshots(rs).observed and frOnReadSnapshots(rs).demand = runners(i).readSnapshotState.demand and frOnReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                        exit;
+                                    elsif rs >= frOnReadSnapshotIndex and not frOnReadSnapshots(rs).observed then
+                                        frOnReadSnapshots(rs) <= (
+                                            demand => runners(i).readSnapshotState.demand,
+                                            executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                            observed => true
+                                        );
+                                        frOnReadSnapshotIndex := rs + 1;
+                                    end if;
+                                end loop;
+                                for ws in 0 to 53 loop
+                                    if frOnWriteSnapshots(ws).observed and frOnWriteSnapshots(ws).relayOn = runners(i).writeSnapshotState.relayOn and frOnWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState and frOnWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry then
+                                        exit;
+                                    elsif ws >= frOnWriteSnapshotIndex and not frOnWriteSnapshots(ws).observed then
+                                        frOnWriteSnapshots(ws) <= (
+                                            relayOn => runners(i).writeSnapshotState.relayOn,
+                                            nextState => runners(i).writeSnapshotState.nextState,
+                                            executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                            observed => true
+                                        );
+                                        frOnWriteSnapshotIndex := ws + 1;
+                                        exit;
+                                    end if;
+                                end loop;
+                                for os in 0 to 5 loop
+                                    if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                        exit;
+                                    elsif os >= observedStatesIndex and not observedStates(os).observed then
+                                        observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                        observedStatesIndex := os + 1;
+                                        exit;
+                                    end if;
+                                end loop;
+                                -- Check if next state is not the same as the state that was just executed.
+                                if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                    -- Add to pending states logic.
+                                    for ps in 0 to 5 loop
+                                        -- If already exists in pending state or already exists in observed states, then exit.
+                                        if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or
+                                            (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                            exit;
+                                        -- otherwise, add to pending states.
+                                        elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                            pendingStates(ps) <= (
+                                                state => runners(i).nextState,
+                                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                observed => true
+                                            );
+                                            pendingStatesIndex := ps + 1;
+                                            exit;
+                                        end if;
+                                    end loop;
+                                end if;
+                            else
+                                for rsi in 0 to (i - 1) loop
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState.demand = runners(i).readSnapshotState.demand) and
+                                        (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for rs in 0 to 161 loop
+                                            if frOnReadSnapshots(rs).observed and frOnReadSnapshots(rs).demand = runners(i).readSnapshotState.demand and frOnReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                                exit;
+                                            elsif rs >= frOnReadSnapshotIndex and not frOnReadSnapshots(rs).observed then
+                                                frOnReadSnapshots(rs) <= (
+                                                    demand => runners(i).readSnapshotState.demand,
+                                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                                    observed => true
+                                                );
+                                                frOnReadSnapshotIndex := rs + 1;
+                                            end if;
+                                        end loop;
+                                    end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
+                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState.relayOn = runners(i).writeSnapshotState.relayOn) and (runners(rsi).writeSnapshotState.nextState = runners(i).writeSnapshotState.nextState) and (runners(rsi).writeSnapshotState.executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                        exit;
+                                    elsif rsi = i - 1 then
+                                        for ws in 0 to 53 loop
+                                            if frOnWriteSnapshots(ws).observed and frOnWriteSnapshots(ws).relayOn = runners(i).writeSnapshotState.relayOn and frOnWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState and frOnWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry then
+                                                exit;
+                                            elsif ws >= frOnWriteSnapshotIndex and not frOnWriteSnapshots(ws).observed then
+                                                frOnWriteSnapshots(ws) <= (
+                                                    relayOn => runners(i).writeSnapshotState.relayOn,
+                                                    nextState => runners(i).writeSnapshotState.nextState,
+                                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                    observed => true
+                                                );
+                                                frOnWriteSnapshotIndex := ws + 1;
                                                 exit;
                                             end if;
                                         end loop;
