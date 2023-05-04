@@ -451,6 +451,7 @@ if rising_edge(clk) then
                                             observed => true
                                         );
                                         frOnReadSnapshotIndex := rs + 1;
+                                        exit;
                                     end if;
                                 end loop;
                                 for ws in 0 to 53 loop
@@ -512,6 +513,7 @@ if rising_edge(clk) then
                                                     observed => true
                                                 );
                                                 frOnReadSnapshotIndex := rs + 1;
+                                                exit;
                                             end if;
                                         end loop;
                                     end if;
