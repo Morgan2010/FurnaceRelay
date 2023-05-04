@@ -76,7 +76,6 @@ architecture Behavioral of RingletRunner is
     signal tracker: std_logic := '0';
     constant WaitForStart: std_logic := '0';
     constant Executing: std_logic := '1';
-    signal currentExecuteOnEntry: boolean := true;
     signal currentState: std_logic_vector(1 downto 0) := "00";
     
     component FurnaceRelayRunner is
@@ -149,7 +148,6 @@ case tracker is
             machine.previousRingletIn <= previousRinglet;
         end if;
         currentState <= state;
-        currentExecuteOnEntry <= previousRinglet /= state;
     when Executing =>
         if machine.finished then
             writeSnapshotState <= (
@@ -157,7 +155,8 @@ case tracker is
                 heat => machine.fr_heat,
                 relayOn => machine.relayOn,
                 state => currentState,
-                executeOnEntry => currentExecuteOnEntry
+                nextState => machine.currentStateOut,
+                executeOnEntry => machine.currentStateOut /= currentState
             );
             nextState <= machine.currentStateOut;
             finished <= true;

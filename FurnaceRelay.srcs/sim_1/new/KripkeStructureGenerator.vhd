@@ -41,7 +41,6 @@ architecture Behavioral of KripkeStructureGenerator is
     signal clk: std_logic := '0';
     signal initialReadSnapshots: Initial_ReadSnapshots_t;
     signal initialWriteSnapshots: Initial_WriteSnapshots_t;
-    signal initialEdges: Initial_Edges_t;
     signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
         readSnapshotState => (
@@ -55,7 +54,8 @@ architecture Behavioral of KripkeStructureGenerator is
             heat => '0',
             relayOn => '0',
             state => "00",
-            executeOnEntry => true
+            nextState => "00",
+            executeOnEntry => false
         ),
         nextState => "00",
         finished => true
@@ -118,7 +118,6 @@ end generate run_gen;
 process(clk)
 variable initialReadSnapshotIndex: integer range 0 to 1 := 0;
 variable initialWriteSnapshotIndex: integer range 0 to 1 := 0;
-variable initialEdgeIndex: integer range 0 to 1 := 0;
 variable observedStatesIndex: integer range 0 to 5 := 0;
 variable pendingStatesIndex: integer range 0 to 5 := 0;
 begin
@@ -164,31 +163,16 @@ if rising_edge(clk) then
                                         exit;
                                     end if;
                                 end loop;
-                                for ws in 0 to 1 loop
-                                    if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                for ws in 0 to 5 loop
+                                    if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry and initialWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState) then
                                         exit;
                                     elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
                                         initialWriteSnapshots(ws) <= (
+                                            nextState => runners(i).writeSnapshotState.nextState,
                                             executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                             observed => true
                                         );
                                         initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
-                                        exit;
-                                    end if;
-                                end loop;
-                                for ed in 0 to 1 loop
-                                    if (initialEdges(ed).observed and initialEdges(ed).writeSnapshot = (executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true) and initialEdges(ed).nextState = runners(i).nextState) then
-                                        exit;
-                                    elsif ed >= initialEdgeIndex and not initialEdges(ed).observed then
-                                        initialEdges(ed) <= (
-                                            writeSnapshot => (
-                                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                                observed => true
-                                            ),
-                                            nextState => runners(i).nextState,
-                                            observed => true
-                                        );
-                                        initialEdgeIndex := initialEdgeIndex + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -201,19 +185,26 @@ if rising_edge(clk) then
                                         exit;
                                     end if;
                                 end loop;
-                                for ps in 0 to 5 loop
-                                    if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (states(i) /= runners(i).nextState) then
-                                        exit;
-                                    elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
-                                        pendingStates(ps) <= (
-                                            state => runners(i).nextState,
-                                            executeOnEntry => states(i) /= runners(i).nextState,
-                                            observed => true
-                                        );
-                                        pendingStatesIndex := pendingStatesIndex + 1;
-                                        exit;
-                                    end if;
-                                end loop;
+                                -- Check if next state is not the same as the state that was just executed.
+                                if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                    -- Add to pending states logic.
+                                    for ps in 0 to 5 loop
+                                        -- If already exists in pending state or already exists in observed states, then exit.
+                                        if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or
+                                            (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                            exit;
+                                        -- otherwise, add to pending states.
+                                        elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                            pendingStates(ps) <= (
+                                                state => runners(i).nextState,
+                                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                observed => true
+                                            );
+                                            pendingStatesIndex := pendingStatesIndex + 1;
+                                            exit;
+                                        end if;
+                                    end loop;
+                                end if;
                             else
                                 -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
                                 for rsi in 0 to (i - 1) loop
@@ -237,30 +228,15 @@ if rising_edge(clk) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for ws in 0 to 1 loop
-                                            if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                            if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) and initialWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState then
                                                 exit;
                                             elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
                                                 initialWriteSnapshots(ws) <= (
+                                                    nextState => runners(i).writeSnapshotState.nextState,
                                                     executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                     observed => true
                                                 );
                                                 initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
-                                                exit;
-                                            end if;
-                                        end loop;
-                                        for ed in 0 to 1 loop
-                                            if (initialEdges(ed).observed and initialEdges(ed).writeSnapshot = (executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true) and initialEdges(ed).nextState = runners(i).nextState) then
-                                                exit;
-                                            elsif ed >= initialEdgeIndex and not initialEdges(ed).observed then
-                                                initialEdges(ed) <= (
-                                                    writeSnapshot => (
-                                                        executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                                        observed => true
-                                                    ),
-                                                    nextState => runners(i).nextState,
-                                                    observed => true
-                                                );
-                                                initialEdgeIndex := initialEdgeIndex + 1;
                                                 exit;
                                             end if;
                                         end loop;
@@ -281,19 +257,26 @@ if rising_edge(clk) then
                                     if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
-                                        for ps in 0 to 5 loop
-                                            if pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = (states(i) /= runners(i).nextState) then
-                                                exit;
-                                            elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
-                                                pendingStates(ps) <= (
-                                                    state => runners(i).nextState,
-                                                    executeOnEntry => states(i) /= runners(i).nextState,
-                                                    observed => true
-                                                );
-                                                pendingStatesIndex := pendingStatesIndex + 1;
-                                                exit;
-                                            end if;
-                                        end loop;
+                                        -- Check if next state is not the same as the state that was just executed.
+                                        if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                            -- Add to pending states logic.
+                                            for ps in 0 to 5 loop
+                                                -- If already exists in pending state or already exists in observed states, then exit.
+                                                if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or 
+                                                    (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                                                    exit;
+                                                -- otherwise, add to pending states.
+                                                elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                                    pendingStates(ps) <= (
+                                                        state => runners(i).nextState,
+                                                        executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                                        observed => true
+                                                    );
+                                                    pendingStatesIndex := pendingStatesIndex + 1;
+                                                    exit;
+                                                end if;
+                                            end loop;
+                                        end if;
                                     end if;
                                 end loop;
                             end if;

@@ -36,6 +36,7 @@ package FR_KripkeTypes2 is
         heat: std_logic;
         relayOn: std_logic;
         state: std_logic_vector(1 downto 0);
+        nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
     end record WriteSnapshot_t;
 
@@ -68,19 +69,12 @@ package FR_KripkeTypes2 is
     type Initial_ReadSnapshots_t is array(0 to 1) of Initial_ReadSnapshot_t;
     
     type Initial_WriteSnapshot_t is record
+        nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
         observed: boolean;
     end record Initial_WriteSnapshot_t;
     
-    type Initial_WriteSnapshots_t is array(0 to 1) of Initial_WriteSnapshot_t;
-    
-    type Initial_Edge_t is record
-        writeSnapshot: Initial_WriteSnapshot_t;
-        nextState: std_logic_vector(1 downto 0);
-        observed: boolean;
-    end record Initial_Edge_t;
-    
-    type Initial_Edges_t is array(0 to 1) of Initial_Edge_t;
+    type Initial_WriteSnapshots_t is array(0 to 5) of Initial_WriteSnapshot_t;
     
     type RunnerParameters_t is record
         readSnapshotState: ReadSnapshot_t;
