@@ -41,10 +41,13 @@ architecture Behavioral of KripkeStructureGenerator is
     signal clk: std_logic := '0';
     signal initialReadSnapshots: Initial_ReadSnapshots_t;
     signal initialWriteSnapshots: Initial_WriteSnapshots_t;
+    signal initialRinglets: Initial_Ringlets_t;
     signal frOffReadSnapshots: FROff_ReadSnapshots_t;
     signal frOffWriteSnapshots: FROff_WriteSnapshots_t;
+    signal frOffRinglets: FROff_Ringlets_t;
     signal frOnReadSnapshots: FROn_Readsnapshots_t;
     signal frOnWriteSnapshots: FROn_WriteSnapshots_t;
+    signal frOnRinglets: FROn_Ringlets_t;
     signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
         readSnapshotState => (
@@ -123,10 +126,13 @@ end generate run_gen;
 process(clk)
 variable initialReadSnapshotIndex: integer range 0 to 1 := 0;
 variable initialWriteSnapshotIndex: integer range 0 to 1 := 0;
+variable initialRingletIndex: integer range 0 to 1 := 0;
 variable frOffReadSnapshotIndex: integer range 0 to 1457 := 0;
 variable frOffWriteSnapshotIndex: integer range 0 to 53 := 0;
+variable frOffRingletIndex: integer range 0 to 1457 := 0;
 variable frOnReadSnapshotIndex: integer range 0 to 161 := 0;
 variable frOnWriteSnapshotIndex: integer range 0 to 53 := 0;
+variable frOnRingletIndex: integer range 0 to 161 := 0;
 variable observedStatesIndex: integer range 0 to 5 := 0;
 variable pendingStatesIndex: integer range 0 to 5 := 0;
 begin
@@ -158,6 +164,19 @@ if rising_edge(clk) then
                 if currentJobs(i) then
                     case states(i) is
                         when STATE_Initial =>
+                            initialRinglets(initialRingletIndex) <= (
+                                readSnapshot => (
+                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                    observed => true
+                                ),
+                                writeSnapshot => (
+                                    nextState => runners(i).writeSnapshotState.nextState,
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                    observed => true
+                                ),
+                                observed => true
+                            );
+                            initialRingletIndex := initialRingletIndex + 1;
                             -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
                             if i = 0 then
                                 for rs in 0 to 1 loop
@@ -296,6 +315,22 @@ if rising_edge(clk) then
                                 end loop;
                             end if;
                         when STATE_FROff =>
+                            frOffRinglets(frOffRingletIndex) <= (
+                                readSnapshot => (
+                                    demand => runners(i).readSnapshotState.demand,
+                                    heat => runners(i).readSnapshotState.heat,
+                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                    observed => true
+                                ),
+                                writeSnapshot => (
+                                    relayOn => runners(i).writeSnapshotState.relayOn,
+                                    nextState => runners(i).writeSnapshotState.nextState,
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                    observed => true
+                                ),
+                                observed => true
+                            );
+                            frOffRingletIndex := frOffRingletIndex + 1;
                             if i = 0 then
                                 for rs in 0 to 1457 loop
                                     if frOffReadSnapshots(rs).observed and frOffReadSnapshots(rs).demand = runners(i).readSnapshotState.demand and frOffReadSnapshots(rs).heat = runners(i).readSnapshotState.heat and frOffReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
@@ -440,6 +475,21 @@ if rising_edge(clk) then
                                 end loop;
                             end if;
                         when STATE_FROn =>
+                            frOnRinglets(frOnRingletIndex) <= (
+                                readSnapshot => (
+                                    demand => runners(i).readSnapshotState.demand,
+                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
+                                    observed => true
+                                ),
+                                writeSnapshot => (
+                                    relayOn => runners(i).writeSnapshotState.relayOn,
+                                    nextState => runners(i).writeSnapshotState.nextState,
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                    observed => true
+                                ),
+                                observed => true
+                            );
+                            frOnRingletIndex := frOnRingletIndex + 1;
                             if i = 0 then
                                 for rs in 0 to 161 loop
                                     if frOnReadSnapshots(rs).observed and frOnReadSnapshots(rs).demand = runners(i).readSnapshotState.demand and frOnReadSnapshots(rs).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then

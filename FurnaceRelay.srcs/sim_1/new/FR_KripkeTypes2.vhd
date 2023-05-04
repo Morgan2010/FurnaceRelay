@@ -76,6 +76,14 @@ package FR_KripkeTypes2 is
     
     type Initial_WriteSnapshots_t is array(0 to 5) of Initial_WriteSnapshot_t;
     
+    type Initial_Ringlet_t is record
+        readSnapshot: Initial_ReadSnapshot_t;
+        writeSnapshot: Initial_WriteSnapshot_t;
+        observed: boolean;
+    end record Initial_Ringlet_t;
+    
+    type Initial_Ringlets_t is array (0 to 1) of Initial_Ringlet_t;
+    
     type FROff_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
         heat: std_logic;
@@ -94,6 +102,14 @@ package FR_KripkeTypes2 is
     
     type FROff_WriteSnapshots_t is array(0 to 53) of FROff_WriteSnapshot_t;
     
+    type FROff_Ringlet_t is record
+        readSnapshot: FROff_ReadSnapshot_t;
+        writeSnapshot: FROff_WriteSnapshot_t;
+        observed: boolean;
+    end record FROff_Ringlet_t;
+    
+    type FROff_Ringlets_t is array (0 to 1457) of FROff_Ringlet_t;
+    
     type FROn_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
@@ -110,6 +126,14 @@ package FR_KripkeTypes2 is
     end record FROn_WriteSnapshot_t;
     
     type FROn_WriteSnapshots_t is array (0 to 53) of FROn_WriteSnapshot_t;
+    
+    type FROn_Ringlet_t is record
+        readSnapshot: FROn_ReadSnapshot_t;
+        writeSnapshot: FROn_WriteSnapshot_t;
+        observed: boolean;
+    end record FROn_Ringlet_t;
+    
+    type FROn_Ringlets_t is array (0 to 161) of FROn_Ringlet_t;
     
     type RunnerParameters_t is record
         readSnapshotState: ReadSnapshot_t;
