@@ -164,7 +164,7 @@ if rising_edge(clk) then
                                             executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
                                             observed => true
                                         );
-                                        initialReadSnapshotIndex := initialReadSnapshotIndex + 1;
+                                        initialReadSnapshotIndex := rs + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -177,7 +177,7 @@ if rising_edge(clk) then
                                             executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                             observed => true
                                         );
-                                        initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
+                                        initialWriteSnapshotIndex := ws + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -186,7 +186,7 @@ if rising_edge(clk) then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
                                         observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                        observedStatesIndex := observedStatesIndex + 1;
+                                        observedStatesIndex := os + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -205,7 +205,7 @@ if rising_edge(clk) then
                                                 executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                 observed => true
                                             );
-                                            pendingStatesIndex := pendingStatesIndex + 1;
+                                            pendingStatesIndex := ps + 1;
                                             exit;
                                         end if;
                                     end loop;
@@ -224,11 +224,13 @@ if rising_edge(clk) then
                                                     executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
                                                     observed => true
                                                 );
-                                                initialReadSnapshotIndex := initialReadSnapshotIndex + 1;
+                                                initialReadSnapshotIndex := rs + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
                                         exit;
                                     elsif rsi = i - 1 then
@@ -241,11 +243,13 @@ if rising_edge(clk) then
                                                     executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                     observed => true
                                                 );
-                                                initialWriteSnapshotIndex := initialWriteSnapshotIndex + 1;
+                                                initialWriteSnapshotIndex := ws + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
@@ -254,11 +258,13 @@ if rising_edge(clk) then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
                                                 observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                                observedStatesIndex := observedStatesIndex + 1;
+                                                observedStatesIndex := os + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
@@ -277,7 +283,7 @@ if rising_edge(clk) then
                                                         executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                         observed => true
                                                     );
-                                                    pendingStatesIndex := pendingStatesIndex + 1;
+                                                    pendingStatesIndex := ps + 1;
                                                     exit;
                                                 end if;
                                             end loop;
@@ -297,7 +303,7 @@ if rising_edge(clk) then
                                             executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
                                             observed => true
                                         );
-                                        frOffReadSnapshotIndex := frOffReadSnapshotIndex + 1;
+                                        frOffReadSnapshotIndex := rs + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -311,7 +317,7 @@ if rising_edge(clk) then
                                             executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                             observed => true
                                         );
-                                        frOffWriteSnapshotIndex := frOffWriteSnapshotIndex + 1;
+                                        frOffWriteSnapshotIndex := ws + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -320,7 +326,7 @@ if rising_edge(clk) then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
                                         observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                        observedStatesIndex := observedStatesIndex + 1;
+                                        observedStatesIndex := os + 1;
                                         exit;
                                     end if;
                                 end loop;
@@ -339,7 +345,7 @@ if rising_edge(clk) then
                                                 executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                 observed => true
                                             );
-                                            pendingStatesIndex := pendingStatesIndex + 1;
+                                            pendingStatesIndex := ps + 1;
                                             exit;
                                         end if;
                                     end loop;
@@ -360,11 +366,13 @@ if rising_edge(clk) then
                                                     executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
                                                     observed => true
                                                 );
-                                                frOffReadSnapshotIndex := frOffReadSnapshotIndex + 1;
+                                                frOffReadSnapshotIndex := rs + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
                                         exit;
                                     elsif rsi = i - 1 then
@@ -378,11 +386,13 @@ if rising_edge(clk) then
                                                     executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                     observed => true
                                                 );
-                                                frOffWriteSnapshotIndex := frOffWriteSnapshotIndex + 1;
+                                                frOffWriteSnapshotIndex := ws + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
@@ -391,11 +401,13 @@ if rising_edge(clk) then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
                                                 observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                                observedStatesIndex := observedStatesIndex + 1;
+                                                observedStatesIndex := os + 1;
                                                 exit;
                                             end if;
                                         end loop;
                                     end if;
+                                end loop;
+                                for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
@@ -414,7 +426,7 @@ if rising_edge(clk) then
                                                         executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
                                                         observed => true
                                                     );
-                                                    pendingStatesIndex := pendingStatesIndex + 1;
+                                                    pendingStatesIndex := ps + 1;
                                                     exit;
                                                 end if;
                                             end loop;
