@@ -481,6 +481,19 @@ if rising_edge(clk) then
                                     end loop;
                                 end loop;
                             end loop;
+                        when STATE_FROn =>
+                            for i in 0 to 8 loop
+                                for j in 0 to 8 loop
+                                    states(i * 9 + j) <= STATE_FROn;
+                                    demands(i * 9 + j) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
+                                    if pendingStates(s).executeOnEntry then
+                                        previousRinglets(i * 9 + j) <= "ZZ";
+                                    else
+                                        previousRinglets(i * 9 + j) <= STATE_FROn;
+                                    end if;
+                                    currentJobs(i * 9 + j) <= true;
+                                end loop;
+                            end loop;
                         when others =>
                             null;
                     end case;
