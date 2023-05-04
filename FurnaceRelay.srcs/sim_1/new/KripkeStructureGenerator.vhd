@@ -345,7 +345,7 @@ if rising_edge(clk) then
                                     end loop;
                                 end if;
                             else
-                                 -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
+                                -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
                                 for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).readSnapshotState = runners(i).readSnapshotState) then
                                         exit;
