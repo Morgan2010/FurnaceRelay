@@ -213,7 +213,7 @@ if rising_edge(clk) then
                             else
                                 -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState = runners(i).readSnapshotState) then
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for rs in 0 to 1 loop
@@ -231,10 +231,10 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
+                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState.executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) and (runners(rsi).writeSnapshotState.nextState = runners(i).writeSnapshotState.nextState) then
                                         exit;
                                     elsif rsi = i - 1 then
-                                        for ws in 0 to 1 loop
+                                        for ws in 0 to 5 loop
                                             if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) and initialWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState then
                                                 exit;
                                             elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
@@ -353,7 +353,8 @@ if rising_edge(clk) then
                             else
                                 -- When i>0, Check all previous current jobs for the same snapshots and the saved snapshots before adding a new entry into the saved snapshot buffers. 
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState = runners(i).readSnapshotState) then
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState.demand = runners(i).readSnapshotState.demand) and (runners(rsi).readSnapshotState.heat = runners(i).readSnapshotState.heat) and
+                                        (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for rs in 0 to 1457 loop
@@ -373,7 +374,7 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState = runners(i).writeSnapshotState) then
+                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState.relayOn = runners(i).writeSnapshotState.relayOn) and (runners(rsi).writeSnapshotState.nextState = runners(i).writeSnapshotState.nextState) and (runners(rsi).writeSnapshotState.executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for ws in 0 to 53 loop
