@@ -86,6 +86,7 @@ architecture Behavioral of KripkeStructureGenerator is
     constant ChooseNextState: std_logic_vector(3 downto 0) := "0101";
     constant ClearJobs: std_logic_vector(3 downto 0) := "0110";
     constant Finished: std_logic_vector(3 downto 0) := "0111";
+    constant WaitForRunnerInitialisation: std_logic_vector(3 downto 0) := "1000";
     
     signal genTracker: std_logic_vector(3 downto 0) := Setup;
     
@@ -329,12 +330,15 @@ if rising_edge(clk) then
                         when others =>
                             null;
                     end case;
-                    genTracker <= StartExecuting;
+                    genTracker <= WaitForRunnerInitialisation;
                     exit;
                 elsif s = 5 then
                     genTracker <= Finished;
                 end if;
             end loop;
+            reset <= '0';
+        when WaitForRunnerInitialisation =>
+            genTracker <= StartExecuting;
         when others =>
             null;
     end case;
