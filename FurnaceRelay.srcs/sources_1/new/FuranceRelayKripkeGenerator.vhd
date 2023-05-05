@@ -35,20 +35,21 @@ use work.PrimitiveTypes.all;
 
 entity FurnaceRelayKripkeGenerator is
 port(
-    clk: in std_logic
+    clk: in std_logic;
+    initialRinglets: out Initial_Ringlets_t;
+    frOffRinglets: out FROff_Ringlets_t;
+    frOnRinglets: out FROn_Ringlets_t;
+    completed: out std_logic := '0'
 );
 end FurnaceRelayKripkeGenerator;
 
 architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal initialReadSnapshots: Initial_ReadSnapshots_t;
     signal initialWriteSnapshots: Initial_WriteSnapshots_t;
-    signal initialRinglets: Initial_Ringlets_t;
     signal frOffReadSnapshots: FROff_ReadSnapshots_t;
     signal frOffWriteSnapshots: FROff_WriteSnapshots_t;
-    signal frOffRinglets: FROff_Ringlets_t;
     signal frOnReadSnapshots: FROn_Readsnapshots_t;
     signal frOnWriteSnapshots: FROn_WriteSnapshots_t;
-    signal frOnRinglets: FROn_Ringlets_t;
     signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
         readSnapshotState => (
@@ -704,6 +705,8 @@ if rising_edge(clk) then
         when WaitForRunnerInitialisation =>
             reset <= '0';
             genTracker <= StartExecuting;
+        when Finished =>
+            completed <= '1';
         when others =>
             null;
     end case;
