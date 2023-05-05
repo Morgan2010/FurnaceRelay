@@ -73,9 +73,11 @@ architecture Behavioral of RingletRunner is
         observed => false
     );
 
-    signal tracker: std_logic := '0';
-    constant WaitForStart: std_logic := '0';
-    constant Executing: std_logic := '1';
+    signal tracker: std_logic_vector(1 downto 0) := "00";
+    constant WaitForStart: std_logic_vector(1 downto 0) := "00";
+    constant Executing: std_logic_vector(1 downto 0) := "01";
+    constant WaitForMachineStart: std_logic_vector(1 downto 0) := "10";
+    constant WaitForFinish: std_logic_vector(1 downto 0) := "11";
     signal currentState: std_logic_vector(1 downto 0) := "00";
     
     component FurnaceRelayRunner is
@@ -128,7 +130,7 @@ if rising_edge(clk) then
 case tracker is
     when WaitForStart =>
         if reset = '1' then
-            tracker <= Executing;
+            tracker <= WaitForMachineStart;
             machine.reset <= '1';
             readSnapshotState <= (
                 demand => demand,
@@ -148,7 +150,11 @@ case tracker is
             machine.previousRingletIn <= previousRinglet;
         end if;
         currentState <= state;
+    when WaitForMachineStart =>
+        machine.reset <= '1';
+        tracker <= Executing;
     when Executing =>
+        machine.reset <= '1';
         if machine.finished then
             writeSnapshotState <= (
                 demand => machine.fr_demand,
@@ -160,6 +166,11 @@ case tracker is
             );
             nextState <= machine.currentStateOut;
             finished <= true;
+            tracker <= WaitForFinish;
+        end if;
+    when WaitForFinish =>
+        if reset = '0' then
+            machine.reset <= '0';
             tracker <= WaitForStart;
         end if;
     when others =>

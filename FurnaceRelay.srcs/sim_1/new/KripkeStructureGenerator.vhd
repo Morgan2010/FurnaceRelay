@@ -149,9 +149,10 @@ if rising_edge(clk) then
             reset <= '1';
             genTracker <= WaitUntilStart;
         when WaitUntilStart =>
-            reset <= '0';
+            reset <= '1';
             genTracker <= WaitUntilFinish;
         when WaitUntilFinish =>
+            reset <= '1';
             for i in 0 to 1611 loop
                 if currentJobs(i) then
                     if runners(i).finished then
@@ -160,6 +161,7 @@ if rising_edge(clk) then
                 end if;
             end loop;
         when UpdateKripkeStates =>
+            reset <= '1';
             for i in 0 to 1611 loop
                 if currentJobs(i) then
                     case states(i) is
@@ -637,6 +639,7 @@ if rising_edge(clk) then
             end loop;
             genTracker <= ClearJobs;
         when ClearJobs =>
+            reset <= '1';
             currentJobs <= (others => false);
             for j in 0 to 5 loop
                 for p in 0 to 5 loop
@@ -649,6 +652,7 @@ if rising_edge(clk) then
             end loop;
             genTracker <= ChooseNextState;
         when ChooseNextState =>
+            reset <= '0';
             for s in 0 to 5 loop
                 if pendingStates(s).observed then
                     case pendingStates(s).state is
@@ -698,8 +702,8 @@ if rising_edge(clk) then
                     genTracker <= Finished;
                 end if;
             end loop;
-            reset <= '0';
         when WaitForRunnerInitialisation =>
+            reset <= '0';
             genTracker <= StartExecuting;
         when others =>
             null;

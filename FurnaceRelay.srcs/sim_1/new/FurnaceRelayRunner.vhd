@@ -59,6 +59,7 @@ architecture Behavioral of FurnaceRelayRunner is
     constant WaitToStart: std_logic_vector(1 downto 0) := "00";
     constant StartExecuting: std_logic_vector(1 downto 0) := "01";
     constant Executing: std_logic_vector(1 downto 0) := "10";
+    constant WaitForFinish: std_logic_vector(1 downto 0) := "11";
     signal internalState: std_logic_vector(2 downto 0);
     signal rst: std_logic := '0';
     signal setInternalSignals: std_logic := '0';
@@ -129,6 +130,10 @@ case stateTracker is
         if internalState = goalInternalState then
             rst <= '0';
             finished <= true;
+            stateTracker <= WaitForFinish;
+        end if;
+    when WaitForFinish =>
+        if reset = '0' then
             stateTracker <= WaitToStart;
         end if;
     when others =>
