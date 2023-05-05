@@ -124,17 +124,17 @@ run_gen: for i in 0 to 1611 generate
 end generate run_gen;
 
 process(clk)
-variable initialReadSnapshotIndex: integer range 0 to 1 := 0;
-variable initialWriteSnapshotIndex: integer range 0 to 1 := 0;
-variable initialRingletIndex: integer range 0 to 1 := 0;
-variable frOffReadSnapshotIndex: integer range 0 to 1457 := 0;
-variable frOffWriteSnapshotIndex: integer range 0 to 53 := 0;
-variable frOffRingletIndex: integer range 0 to 1457 := 0;
-variable frOnReadSnapshotIndex: integer range 0 to 161 := 0;
-variable frOnWriteSnapshotIndex: integer range 0 to 53 := 0;
-variable frOnRingletIndex: integer range 0 to 161 := 0;
-variable observedStatesIndex: integer range 0 to 5 := 0;
-variable pendingStatesIndex: integer range 0 to 5 := 0;
+variable initialReadSnapshotIndex: integer range 0 to 2 := 0;
+variable initialWriteSnapshotIndex: integer range 0 to 6 := 0;
+variable initialRingletIndex: integer range 0 to 2 := 0;
+variable frOffReadSnapshotIndex: integer range 0 to 1458 := 0;
+variable frOffWriteSnapshotIndex: integer range 0 to 54 := 0;
+variable frOffRingletIndex: integer range 0 to 1458 := 0;
+variable frOnReadSnapshotIndex: integer range 0 to 162 := 0;
+variable frOnWriteSnapshotIndex: integer range 0 to 54 := 0;
+variable frOnRingletIndex: integer range 0 to 162 := 0;
+variable observedStatesIndex: integer range 0 to 6 := 0;
+variable pendingStatesIndex: integer range 0 to 6 := 0;
 begin
 if rising_edge(clk) then
     case genTracker is
