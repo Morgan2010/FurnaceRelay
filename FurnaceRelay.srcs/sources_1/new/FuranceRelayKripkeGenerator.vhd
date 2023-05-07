@@ -46,7 +46,6 @@ end FurnaceRelayKripkeGenerator;
 architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal reset: std_logic := '0';
     signal runners: Runners_t;
-    signal currentJobs: CurrentJobs_t;
 
     component FurnaceRelayRingletRunner is
     port(
@@ -81,7 +80,11 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal demands: Demands_t;
     signal heats: Heats_t;
     signal previousRinglets: std_logic_vector(1 downto 0);
-
+    
+    signal maxIndex: integer range 0 to 728;
+    signal initialRingletIndex: integer range 0 to 2;
+    signal frOffRingletIndex: integer range 0 to 1458 := 0;
+    signal frOnRingletIndex: integer range 0 to 162 := 0;
 begin
 
 run_gen: for i in 0 to 728 generate
@@ -100,9 +103,6 @@ run_gen: for i in 0 to 728 generate
 end generate run_gen;
 
 process(clk)
-variable initialRingletIndex: integer range 0 to 2 := 0;
-variable frOffRingletIndex: integer range 0 to 1458 := 0;
-variable frOnRingletIndex: integer range 0 to 162 := 0;
 variable observedStatesIndex: integer range 0 to 6 := 0;
 variable pendingStatesIndex: integer range 0 to 6 := 0;
 begin
@@ -114,7 +114,9 @@ if rising_edge(clk) then
                 executeOnEntry => true,
                 observed => true
             );
-            currentJobs <= (others => false);
+            initialRingletIndex <= 0;
+            frOffRingletIndex <= 0;
+            frOnRingletIndex <= 0;
             genTracker <= ChooseNextState;
         when StartExecuting =>
             reset <= '1';
@@ -124,142 +126,145 @@ if rising_edge(clk) then
             genTracker <= WaitUntilFinish;
         when WaitUntilFinish =>
             reset <= '1';
-            for i in 0 to 728 loop
-                if currentJobs(i) then
-                    if runners(i).finished then
-                        genTracker <= UpdateKripkeStates;
-                    end if;
+            for i in 0 to maxIndex loop
+                if runners(i).finished then
+                    genTracker <= UpdateKripkeStates;
+                    exit;
                 end if;
             end loop;
         when UpdateKripkeStates =>
             reset <= '1';
-            for i in 0 to 728 loop
-                if currentJobs(i) then
-                    case states is
-                        when STATE_Initial =>
-                            initialRinglets(initialRingletIndex) <= (
-                                readSnapshot => (
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
-                                ),
-                                writeSnapshot => (
-                                    nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
-                                ),
-                                observed => true
-                            );
-                            initialRingletIndex := initialRingletIndex + 1;
-                        when STATE_FROff =>
-                            frOffRinglets(frOffRingletIndex) <= (
-                                readSnapshot => (
-                                    demand => runners(i).readSnapshotState.demand,
-                                    heat => runners(i).readSnapshotState.heat,
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
-                                ),
-                                writeSnapshot => (
-                                    relayOn => runners(i).writeSnapshotState.relayOn,
-                                    nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
-                                ),
-                                observed => true
-                            );
-                            frOffRingletIndex := frOffRingletIndex + 1;
-                        when STATE_FROn =>
-                            frOnRinglets(frOnRingletIndex) <= (
-                                readSnapshot => (
-                                    demand => runners(i).readSnapshotState.demand,
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
-                                ),
-                                writeSnapshot => (
-                                    relayOn => runners(i).writeSnapshotState.relayOn,
-                                    nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
-                                ),
-                                observed => true
-                            );
-                            frOnRingletIndex := frOnRingletIndex + 1;
-                        when others =>
-                            null;
-                    end case;
-                    -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
-                    if i = 0 then
-                        for os in 0 to 5 loop
-                            if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+            for i in 0 to maxIndex loop
+                case states is
+                    when STATE_Initial =>
+                        initialRinglets(initialRingletIndex + i) <= (
+                            readSnapshot => (
+                                executeOnEntry => runners(i).readSnapshotState.executeOnEntry
+                            ),
+                            writeSnapshot => (
+                                nextState => runners(i).writeSnapshotState.nextState,
+                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
+                            ),
+                            observed => true
+                        );
+                    when STATE_FROff =>
+                        frOffRinglets(frOffRingletIndex + i) <= (
+                            readSnapshot => (
+                                demand => runners(i).readSnapshotState.demand,
+                                heat => runners(i).readSnapshotState.heat,
+                                executeOnEntry => runners(i).readSnapshotState.executeOnEntry
+                            ),
+                            writeSnapshot => (
+                                relayOn => runners(i).writeSnapshotState.relayOn,
+                                nextState => runners(i).writeSnapshotState.nextState,
+                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
+                            ),
+                            observed => true
+                        );
+                    when STATE_FROn =>
+                        frOnRinglets(frOnRingletIndex + i) <= (
+                            readSnapshot => (
+                                demand => runners(i).readSnapshotState.demand,
+                                executeOnEntry => runners(i).readSnapshotState.executeOnEntry
+                            ),
+                            writeSnapshot => (
+                                relayOn => runners(i).writeSnapshotState.relayOn,
+                                nextState => runners(i).writeSnapshotState.nextState,
+                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
+                            ),
+                            observed => true
+                        );
+                    when others =>
+                        null;
+                end case;
+                -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
+                if i = 0 then
+                    for os in 0 to 5 loop
+                        if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                            exit;
+                        elsif os >= observedStatesIndex and not observedStates(os).observed then
+                            observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                            observedStatesIndex := os + 1;
+                            exit;
+                        end if;
+                    end loop;
+                    -- Check if next state is not the same as the state that was just executed.
+                    if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                        -- Add to pending states logic.
+                        for ps in 0 to 5 loop
+                            -- If already exists in pending state or already exists in observed states, then exit.
+                            if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or
+                                (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
                                 exit;
-                            elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                observedStatesIndex := os + 1;
+                            -- otherwise, add to pending states.
+                            elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                pendingStates(ps) <= (
+                                    state => runners(i).nextState,
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                    observed => true
+                                );
+                                pendingStatesIndex := ps + 1;
                                 exit;
                             end if;
                         end loop;
-                        -- Check if next state is not the same as the state that was just executed.
-                        if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
-                            -- Add to pending states logic.
-                            for ps in 0 to 5 loop
-                                -- If already exists in pending state or already exists in observed states, then exit.
-                                if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or
-                                    (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
+                    end if;
+                else
+                    for rsi in 0 to (i - 1) loop
+                        if (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                            exit;
+                        elsif rsi = i - 1 then
+                            for os in 0 to 5 loop
+                                if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                     exit;
-                                -- otherwise, add to pending states.
-                                elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
-                                    pendingStates(ps) <= (
-                                        state => runners(i).nextState,
-                                        executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                        observed => true
-                                    );
-                                    pendingStatesIndex := ps + 1;
+                                elsif os >= observedStatesIndex and not observedStates(os).observed then
+                                    observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                    observedStatesIndex := os + 1;
                                     exit;
                                 end if;
                             end loop;
                         end if;
-                    else
-                        for rsi in 0 to (i - 1) loop
-                            if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
-                                exit;
-                            elsif rsi = i - 1 then
-                                for os in 0 to 5 loop
-                                    if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                    end loop;
+                    for rsi in 0 to (i - 1) loop
+                        if (runners(rsi).nextState = runners(i).nextState) and ((states /= runners(rsi).nextState) = (states /= runners(i).nextState)) then
+                            exit;
+                        elsif rsi = i - 1 then
+                            -- Check if next state is not the same as the state that was just executed.
+                            if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                -- Add to pending states logic.
+                                for ps in 0 to 5 loop
+                                    -- If already exists in pending state or already exists in observed states, then exit.
+                                    if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or 
+                                        (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
                                         exit;
-                                    elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                        observedStatesIndex := os + 1;
+                                    -- otherwise, add to pending states.
+                                    elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
+                                        pendingStates(ps) <= (
+                                            state => runners(i).nextState,
+                                            executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
+                                            observed => true
+                                        );
+                                        pendingStatesIndex := ps + 1;
                                         exit;
                                     end if;
                                 end loop;
                             end if;
-                        end loop;
-                        for rsi in 0 to (i - 1) loop
-                            if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states /= runners(rsi).nextState) = (states /= runners(i).nextState)) then
-                                exit;
-                            elsif rsi = i - 1 then
-                                -- Check if next state is not the same as the state that was just executed.
-                                if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
-                                    -- Add to pending states logic.
-                                    for ps in 0 to 5 loop
-                                        -- If already exists in pending state or already exists in observed states, then exit.
-                                        if (pendingStates(ps).observed and pendingStates(ps).state = runners(i).nextState and pendingStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) or 
-                                            (observedStates(ps).observed and observedStates(ps).state = runners(i).nextState and observedStates(ps).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
-                                            exit;
-                                        -- otherwise, add to pending states.
-                                        elsif ps >= pendingStatesIndex and not pendingStates(ps).observed then
-                                            pendingStates(ps) <= (
-                                                state => runners(i).nextState,
-                                                executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                                observed => true
-                                            );
-                                            pendingStatesIndex := ps + 1;
-                                            exit;
-                                        end if;
-                                    end loop;
-                                end if;
-                            end if;
-                        end loop;
-                    end if;
+                        end if;
+                    end loop;
                 end if;
             end loop;
+            case states is
+                when STATE_Initial =>
+                    initialRingletIndex <= maxIndex + 1;
+                when STATE_FROff =>
+                    frOffRingletIndex <= maxIndex + 1;
+                when STATE_FROn =>
+                    frOnRingletIndex <= maxIndex + 1;
+                when others =>
+                    null;
+            end case;
             genTracker <= ClearJobs;
         when ClearJobs =>
             reset <= '1';
-            currentJobs <= (others => false);
             for j in 0 to 5 loop
                 for p in 0 to 5 loop
                     if pendingStates(p).observed then
@@ -276,8 +281,8 @@ if rising_edge(clk) then
                 if pendingStates(s).observed then
                     case pendingStates(s).state is
                         when STATE_Initial =>
-                            currentJobs(0) <= true;
                             states <= STATE_Initial;
+                            maxIndex <= 0;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
                             else
@@ -292,8 +297,8 @@ if rising_edge(clk) then
                                     end loop;
                                 end loop;
                             end loop;
-                            currentJobs <= (others => true);
                             states <= STATE_FROff;
+                            maxIndex <= 728;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
                             else
@@ -305,8 +310,8 @@ if rising_edge(clk) then
                                     demands(i * 9 + j) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
                                 end loop;
                             end loop;
-                            currentJobs <= (0 to 80 => true, others => false);
                             states <= STATE_FROn;
+                            maxIndex <= 80;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
                             else
