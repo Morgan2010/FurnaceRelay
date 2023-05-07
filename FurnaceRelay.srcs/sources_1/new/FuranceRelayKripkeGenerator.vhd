@@ -44,21 +44,21 @@ port(
 end FurnaceRelayKripkeGenerator;
 
 architecture Behavioral of FurnaceRelayKripkeGenerator is
-    signal reset: std_logic := '0';
+    signal reset: std_logic;
     signal runners: Runners_t;
 
     component FurnaceRelayRingletRunner is
     port(
         clk: in std_logic;
         reset: in std_logic := '0';
-        state: in std_logic_vector(1 downto 0) := "00";
-        demand: in std_logic_vector(1 downto 0) := "00";
-        heat: in std_logic := '0';
-        previousRinglet: in std_logic_vector(1 downto 0) := "ZZ";
+        state: in std_logic_vector(1 downto 0);
+        demand: in std_logic_vector(1 downto 0);
+        heat: in std_logic;
+        previousRinglet: in std_logic_vector(1 downto 0);
         readSnapshotState: out ReadSnapshot_t;
         writeSnapshotState: out WriteSnapshot_t;
         nextState: out std_logic_vector(1 downto 0);
-        finished: out boolean := true
+        finished: out boolean
     );
     end component;
     
@@ -83,8 +83,8 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     
     signal maxIndex: integer range 0 to 728;
     signal initialRingletIndex: integer range 0 to 2;
-    signal frOffRingletIndex: integer range 0 to 1458 := 0;
-    signal frOnRingletIndex: integer range 0 to 162 := 0;
+    signal frOffRingletIndex: integer range 0 to 1458;
+    signal frOnRingletIndex: integer range 0 to 162;
 begin
 
 run_gen: for i in 0 to 728 generate
@@ -118,6 +118,7 @@ if rising_edge(clk) then
             frOffRingletIndex <= 0;
             frOnRingletIndex <= 0;
             genTracker <= ChooseNextState;
+            reset <= '0';
         when StartExecuting =>
             reset <= '1';
             genTracker <= WaitUntilStart;
