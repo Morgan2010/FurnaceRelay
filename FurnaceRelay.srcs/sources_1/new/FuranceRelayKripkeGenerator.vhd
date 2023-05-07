@@ -104,7 +104,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal states: std_logic_vector(1 downto 0) := STATE_Initial;
     signal demands: Demands_t := (others => "00");
     signal heats: Heats_t := (others => '0');
-    signal previousRinglets: States_t := (others => "ZZ");
+    signal previousRinglets: std_logic_vector(1 downto 0) := "ZZ";
 
 begin
 
@@ -115,7 +115,7 @@ run_gen: for i in 0 to 1611 generate
         state => states,
         demand => demands(i),
         heat => heats(i),
-        previousRinglet => previousRinglets(i),
+        previousRinglet => previousRinglets,
         readSnapshotState => runners(i).readSnapshotState,
         writeSnapshotState => runners(i).writeSnapshotState,
         nextState => runners(i).nextState,
@@ -660,9 +660,9 @@ if rising_edge(clk) then
                             currentJobs(0) <= true;
                             states <= STATE_Initial;
                             if pendingStates(s).executeOnEntry then
-                                previousRinglets(0) <= "ZZ";
+                                previousRinglets <= "ZZ";
                             else
-                                previousRinglets(0) <= STATE_Initial;
+                                previousRinglets <= STATE_Initial;
                             end if;
                         when STATE_FROff =>
                             for i in 0 to 8 loop
@@ -670,29 +670,30 @@ if rising_edge(clk) then
                                     for k in 0 to 8 loop
                                         demands(i * 81 + j * 9 + k) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
                                         heats(i * 81 + j * 9 + k) <= stdLogicTypes(k);
-                                        if pendingStates(s).executeOnEntry then
-                                            previousRinglets(i * 81 + j * 9 + k) <= "ZZ";
-                                        else
-                                            previousRinglets(i * 81 + j * 9 + k) <= STATE_FROff;
-                                        end if;
+                                        
                                         currentJobs(i * 81 + j * 9 + k) <= true;
                                     end loop;
                                 end loop;
                             end loop;
                             states <= STATE_FROff;
+                            if pendingStates(s).executeOnEntry then
+                                previousRinglets <= "ZZ";
+                            else
+                                previousRinglets <= STATE_FROff;
+                            end if;
                         when STATE_FROn =>
                             for i in 0 to 8 loop
                                 for j in 0 to 8 loop
                                     demands(i * 9 + j) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
-                                    if pendingStates(s).executeOnEntry then
-                                        previousRinglets(i * 9 + j) <= "ZZ";
-                                    else
-                                        previousRinglets(i * 9 + j) <= STATE_FROn;
-                                    end if;
                                     currentJobs(i * 9 + j) <= true;
                                 end loop;
                             end loop;
                             states <= STATE_FROn;
+                            if pendingStates(s).executeOnEntry then
+                                previousRinglets <= "ZZ";
+                            else
+                                previousRinglets <= STATE_FROn;
+                            end if;
                         when others =>
                             null;
                     end case;
