@@ -142,9 +142,9 @@ package FurnaceRelayTypes is
         finished: boolean;
     end record RunnerParameters_t;
     
-    type Runners_t is array(0 to 1611) of RunnerParameters_t;
+    type Runners_t is array(0 to 728) of RunnerParameters_t;
     
-    type CurrentJobs_t is array(0 to 1611) of boolean;
+    type CurrentJobs_t is array(0 to 728) of boolean;
     
     type ObservedState_t is record
         state: std_logic_vector(1 downto 0);
@@ -154,8 +154,8 @@ package FurnaceRelayTypes is
     
     type AllStates_t is array(0 to 5) of ObservedState_t;
     type States_t is array(0 to 1611) of std_logic_vector(1 downto 0);
-    type Demands_t is array(0 to 1611) of std_logic_vector(1 downto 0);
-    type Heats_t is array(0 to 1611) of std_logic;
+    type Demands_t is array(0 to 728) of std_logic_vector(1 downto 0);
+    type Heats_t is array(0 to 728) of std_logic;
     
     
     constant STATE_Initial: std_logic_vector(1 downto 0) := "00";

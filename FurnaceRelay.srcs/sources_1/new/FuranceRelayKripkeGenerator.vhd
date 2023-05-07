@@ -108,7 +108,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
 
 begin
 
-run_gen: for i in 0 to 1611 generate
+run_gen: for i in 0 to 728 generate
     run_inst: FurnaceRelayRingletRunner port map(
         clk => clk,
         reset => reset,
@@ -153,7 +153,7 @@ if rising_edge(clk) then
             genTracker <= WaitUntilFinish;
         when WaitUntilFinish =>
             reset <= '1';
-            for i in 0 to 1611 loop
+            for i in 0 to 728 loop
                 if currentJobs(i) then
                     if runners(i).finished then
                         genTracker <= UpdateKripkeStates;
@@ -162,7 +162,7 @@ if rising_edge(clk) then
             end loop;
         when UpdateKripkeStates =>
             reset <= '1';
-            for i in 0 to 1611 loop
+            for i in 0 to 728 loop
                 if currentJobs(i) then
                     case states is
                         when STATE_Initial =>
