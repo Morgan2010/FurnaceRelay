@@ -44,9 +44,6 @@ port(
 end FurnaceRelayKripkeGenerator;
 
 architecture Behavioral of FurnaceRelayKripkeGenerator is
-    signal initialWriteSnapshots: Initial_WriteSnapshots_t;
-    signal frOffWriteSnapshots: FROff_WriteSnapshots_t;
-    signal frOnWriteSnapshots: FROn_WriteSnapshots_t;
     signal reset: std_logic := '0';
     signal runners: Runners_t := (others => (
         readSnapshotState => (
@@ -121,11 +118,8 @@ run_gen: for i in 0 to 728 generate
 end generate run_gen;
 
 process(clk)
-variable initialWriteSnapshotIndex: integer range 0 to 6 := 0;
 variable initialRingletIndex: integer range 0 to 2 := 0;
-variable frOffWriteSnapshotIndex: integer range 0 to 54 := 0;
 variable frOffRingletIndex: integer range 0 to 1458 := 0;
-variable frOnWriteSnapshotIndex: integer range 0 to 54 := 0;
 variable frOnRingletIndex: integer range 0 to 162 := 0;
 variable observedStatesIndex: integer range 0 to 6 := 0;
 variable pendingStatesIndex: integer range 0 to 6 := 0;
@@ -175,19 +169,6 @@ if rising_edge(clk) then
                             initialRingletIndex := initialRingletIndex + 1;
                             -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
                             if i = 0 then
-                                for ws in 0 to 5 loop
-                                    if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry and initialWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState) then
-                                        exit;
-                                    elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
-                                        initialWriteSnapshots(ws) <= (
-                                            nextState => runners(i).writeSnapshotState.nextState,
-                                            executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                            observed => true
-                                        );
-                                        initialWriteSnapshotIndex := ws + 1;
-                                        exit;
-                                    end if;
-                                end loop;
                                 for os in 0 to 5 loop
                                     if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
@@ -218,25 +199,6 @@ if rising_edge(clk) then
                                     end loop;
                                 end if;
                             else
-                                for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState.executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) and (runners(rsi).writeSnapshotState.nextState = runners(i).writeSnapshotState.nextState) then
-                                        exit;
-                                    elsif rsi = i - 1 then
-                                        for ws in 0 to 5 loop
-                                            if (initialWriteSnapshots(ws).observed and initialWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) and initialWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState then
-                                                exit;
-                                            elsif ws >= initialWriteSnapshotIndex and not initialWriteSnapshots(ws).observed then
-                                                initialWriteSnapshots(ws) <= (
-                                                    nextState => runners(i).writeSnapshotState.nextState,
-                                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                                    observed => true
-                                                );
-                                                initialWriteSnapshotIndex := ws + 1;
-                                                exit;
-                                            end if;
-                                        end loop;
-                                    end if;
-                                end loop;
                                 for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
@@ -297,20 +259,6 @@ if rising_edge(clk) then
                             );
                             frOffRingletIndex := frOffRingletIndex + 1;
                             if i = 0 then
-                                for ws in 0 to 53 loop
-                                    if frOffWriteSnapshots(ws).observed and frOffWriteSnapshots(ws).relayOn = runners(i).writeSnapshotState.relayOn and frOffWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState and frOffWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry then
-                                        exit;
-                                    elsif ws >= frOffWriteSnapshotIndex and not frOffWriteSnapshots(ws).observed then
-                                        frOffWriteSnapshots(ws) <= (
-                                            relayOn => runners(i).writeSnapshotState.relayOn,
-                                            nextState => runners(i).writeSnapshotState.nextState,
-                                            executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                            observed => true
-                                        );
-                                        frOffWriteSnapshotIndex := ws + 1;
-                                        exit;
-                                    end if;
-                                end loop;
                                 for os in 0 to 5 loop
                                     if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
@@ -341,26 +289,6 @@ if rising_edge(clk) then
                                     end loop;
                                 end if;
                             else
-                                for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState.relayOn = runners(i).writeSnapshotState.relayOn) and (runners(rsi).writeSnapshotState.nextState = runners(i).writeSnapshotState.nextState) and (runners(rsi).writeSnapshotState.executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
-                                        exit;
-                                    elsif rsi = i - 1 then
-                                        for ws in 0 to 53 loop
-                                            if frOffWriteSnapshots(ws).observed and frOffWriteSnapshots(ws).relayOn = runners(i).writeSnapshotState.relayOn and frOffWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState and frOffWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry then
-                                                exit;
-                                            elsif ws >= frOffWriteSnapshotIndex and not frOffWriteSnapshots(ws).observed then
-                                                frOffWriteSnapshots(ws) <= (
-                                                    relayOn => runners(i).writeSnapshotState.relayOn,
-                                                    nextState => runners(i).writeSnapshotState.nextState,
-                                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                                    observed => true
-                                                );
-                                                frOffWriteSnapshotIndex := ws + 1;
-                                                exit;
-                                            end if;
-                                        end loop;
-                                    end if;
-                                end loop;
                                 for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
@@ -420,20 +348,6 @@ if rising_edge(clk) then
                             );
                             frOnRingletIndex := frOnRingletIndex + 1;
                             if i = 0 then
-                                for ws in 0 to 53 loop
-                                    if frOnWriteSnapshots(ws).observed and frOnWriteSnapshots(ws).relayOn = runners(i).writeSnapshotState.relayOn and frOnWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState and frOnWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry then
-                                        exit;
-                                    elsif ws >= frOnWriteSnapshotIndex and not frOnWriteSnapshots(ws).observed then
-                                        frOnWriteSnapshots(ws) <= (
-                                            relayOn => runners(i).writeSnapshotState.relayOn,
-                                            nextState => runners(i).writeSnapshotState.nextState,
-                                            executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                            observed => true
-                                        );
-                                        frOnWriteSnapshotIndex := ws + 1;
-                                        exit;
-                                    end if;
-                                end loop;
                                 for os in 0 to 5 loop
                                     if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
@@ -464,26 +378,6 @@ if rising_edge(clk) then
                                     end loop;
                                 end if;
                             else
-                                for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).writeSnapshotState.relayOn = runners(i).writeSnapshotState.relayOn) and (runners(rsi).writeSnapshotState.nextState = runners(i).writeSnapshotState.nextState) and (runners(rsi).writeSnapshotState.executeOnEntry = runners(i).writeSnapshotState.executeOnEntry) then
-                                        exit;
-                                    elsif rsi = i - 1 then
-                                        for ws in 0 to 53 loop
-                                            if frOnWriteSnapshots(ws).observed and frOnWriteSnapshots(ws).relayOn = runners(i).writeSnapshotState.relayOn and frOnWriteSnapshots(ws).nextState = runners(i).writeSnapshotState.nextState and frOnWriteSnapshots(ws).executeOnEntry = runners(i).writeSnapshotState.executeOnEntry then
-                                                exit;
-                                            elsif ws >= frOnWriteSnapshotIndex and not frOnWriteSnapshots(ws).observed then
-                                                frOnWriteSnapshots(ws) <= (
-                                                    relayOn => runners(i).writeSnapshotState.relayOn,
-                                                    nextState => runners(i).writeSnapshotState.nextState,
-                                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                                    observed => true
-                                                );
-                                                frOnWriteSnapshotIndex := ws + 1;
-                                                exit;
-                                            end if;
-                                        end loop;
-                                    end if;
-                                end loop;
                                 for rsi in 0 to (i - 1) loop
                                     if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
