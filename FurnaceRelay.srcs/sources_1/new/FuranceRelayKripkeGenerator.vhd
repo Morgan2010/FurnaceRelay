@@ -45,26 +45,8 @@ end FurnaceRelayKripkeGenerator;
 
 architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal reset: std_logic := '0';
-    signal runners: Runners_t := (others => (
-        readSnapshotState => (
-            demand => "00",
-            heat => '0',
-            state => "00",
-            executeOnEntry => true
-        ),
-        writeSnapshotState => (
-            demand => "00",
-            heat => '0',
-            relayOn => '0',
-            state => "00",
-            nextState => "00",
-            executeOnEntry => false
-        ),
-        nextState => "00",
-        finished => true
-    ));
-    
-    signal currentJobs: CurrentJobs_t := (others => false);
+    signal runners: Runners_t;
+    signal currentJobs: CurrentJobs_t;
 
     component FurnaceRelayRingletRunner is
     port(
@@ -92,13 +74,13 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     constant WaitForRunnerInitialisation: std_logic_vector(3 downto 0) := "1000";
     
     signal genTracker: std_logic_vector(3 downto 0) := Setup;
-    
+
     signal observedStates: AllStates_t;
     signal pendingStates: AllStates_t;
-    signal states: std_logic_vector(1 downto 0) := STATE_Initial;
-    signal demands: Demands_t := (others => "00");
-    signal heats: Heats_t := (others => '0');
-    signal previousRinglets: std_logic_vector(1 downto 0) := "ZZ";
+    signal states: std_logic_vector(1 downto 0);
+    signal demands: Demands_t;
+    signal heats: Heats_t;
+    signal previousRinglets: std_logic_vector(1 downto 0);
 
 begin
 
@@ -132,6 +114,7 @@ if rising_edge(clk) then
                 executeOnEntry => true,
                 observed => true
             );
+            currentJobs <= (others => false);
             genTracker <= ChooseNextState;
         when StartExecuting =>
             reset <= '1';
