@@ -66,15 +66,11 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record Initial_ReadSnapshot_t;
     
-    type Initial_ReadSnapshots_t is array(0 to 1) of Initial_ReadSnapshot_t;
-    
     type Initial_WriteSnapshot_t is record
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
         observed: boolean;
     end record Initial_WriteSnapshot_t;
-    
-    type Initial_WriteSnapshots_t is array(0 to 5) of Initial_WriteSnapshot_t;
     
     type Initial_Ringlet_t is record
         readSnapshot: Initial_ReadSnapshot_t;
@@ -91,16 +87,12 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record FROff_ReadSnapshot_t;
     
-    type FROff_ReadSnapshots_t is array(0 to 1457) of FROff_ReadSnapshot_t;
-    
     type FROff_WriteSnapshot_t is record
         relayOn: std_logic;
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
         observed: boolean;
     end record FROff_WriteSnapshot_t;
-    
-    type FROff_WriteSnapshots_t is array(0 to 53) of FROff_WriteSnapshot_t;
     
     type FROff_Ringlet_t is record
         readSnapshot: FROff_ReadSnapshot_t;
@@ -116,16 +108,12 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record FROn_ReadSnapshot_t;
     
-    type FROn_ReadSnapshots_t is array (0 to 161) of FROn_ReadSnapshot_t;
-    
     type FROn_WriteSnapshot_t is record
         relayOn: std_logic;
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
         observed: boolean;
     end record FROn_WriteSnapshot_t;
-    
-    type FROn_WriteSnapshots_t is array (0 to 53) of FROn_WriteSnapshot_t;
     
     type FROn_Ringlet_t is record
         readSnapshot: FROn_ReadSnapshot_t;
@@ -153,7 +141,6 @@ package FurnaceRelayTypes is
     end record ObservedState_t;
     
     type AllStates_t is array(0 to 5) of ObservedState_t;
-    type States_t is array(0 to 1611) of std_logic_vector(1 downto 0);
     type Demands_t is array(0 to 728) of std_logic_vector(1 downto 0);
     type Heats_t is array(0 to 728) of std_logic;
     
