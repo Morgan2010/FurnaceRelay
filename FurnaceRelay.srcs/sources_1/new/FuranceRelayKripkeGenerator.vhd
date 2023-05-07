@@ -101,7 +101,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     
     signal observedStates: AllStates_t;
     signal pendingStates: AllStates_t;
-    signal states: States_t := (others => STATE_Initial);
+    signal states: std_logic_vector(1 downto 0) := STATE_Initial;
     signal demands: Demands_t := (others => "00");
     signal heats: Heats_t := (others => '0');
     signal previousRinglets: States_t := (others => "ZZ");
@@ -112,7 +112,7 @@ run_gen: for i in 0 to 1611 generate
     run_inst: FurnaceRelayRingletRunner port map(
         clk => clk,
         reset => reset,
-        state => states(i),
+        state => states,
         demand => demands(i),
         heat => heats(i),
         previousRinglet => previousRinglets(i),
@@ -164,7 +164,7 @@ if rising_edge(clk) then
             reset <= '1';
             for i in 0 to 1611 loop
                 if currentJobs(i) then
-                    case states(i) is
+                    case states is
                         when STATE_Initial =>
                             initialRinglets(initialRingletIndex) <= (
                                 readSnapshot => (
@@ -207,16 +207,16 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for os in 0 to 5 loop
-                                    if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                    if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                        observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                         observedStatesIndex := os + 1;
                                         exit;
                                     end if;
                                 end loop;
                                 -- Check if next state is not the same as the state that was just executed.
-                                if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                     -- Add to pending states logic.
                                     for ps in 0 to 5 loop
                                         -- If already exists in pending state or already exists in observed states, then exit.
@@ -275,14 +275,14 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for os in 0 to 5 loop
-                                            if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                            if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                                observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                                observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                                 observedStatesIndex := os + 1;
                                                 exit;
                                             end if;
@@ -290,11 +290,11 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
+                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states /= runners(rsi).nextState) = (states /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         -- Check if next state is not the same as the state that was just executed.
-                                        if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                        if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                             -- Add to pending states logic.
                                             for ps in 0 to 5 loop
                                                 -- If already exists in pending state or already exists in observed states, then exit.
@@ -363,16 +363,16 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for os in 0 to 5 loop
-                                    if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                    if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                        observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                         observedStatesIndex := os + 1;
                                         exit;
                                     end if;
                                 end loop;
                                 -- Check if next state is not the same as the state that was just executed.
-                                if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                     -- Add to pending states logic.
                                     for ps in 0 to 5 loop
                                         -- If already exists in pending state or already exists in observed states, then exit.
@@ -435,14 +435,14 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for os in 0 to 5 loop
-                                            if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                            if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                                observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                                observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                                 observedStatesIndex := os + 1;
                                                 exit;
                                             end if;
@@ -450,11 +450,11 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
+                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states /= runners(rsi).nextState) = (states /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         -- Check if next state is not the same as the state that was just executed.
-                                        if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                        if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                             -- Add to pending states logic.
                                             for ps in 0 to 5 loop
                                                 -- If already exists in pending state or already exists in observed states, then exit.
@@ -521,16 +521,16 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for os in 0 to 5 loop
-                                    if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                    if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                         exit;
                                     elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                        observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                         observedStatesIndex := os + 1;
                                         exit;
                                     end if;
                                 end loop;
                                 -- Check if next state is not the same as the state that was just executed.
-                                if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                     -- Add to pending states logic.
                                     for ps in 0 to 5 loop
                                         -- If already exists in pending state or already exists in observed states, then exit.
@@ -591,14 +591,14 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (states(rsi) = states(i)) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                    if currentJobs(rsi) and (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         for os in 0 to 5 loop
-                                            if observedStates(os).observed and observedStates(os).state = states(i) and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
+                                            if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
                                                 exit;
                                             elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                                observedStates(os) <= (state => states(i), executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
+                                                observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
                                                 observedStatesIndex := os + 1;
                                                 exit;
                                             end if;
@@ -606,11 +606,11 @@ if rising_edge(clk) then
                                     end if;
                                 end loop;
                                 for rsi in 0 to (i - 1) loop
-                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states(rsi) /= runners(rsi).nextState) = (states(i) /= runners(i).nextState)) then
+                                    if currentJobs(rsi) and (runners(rsi).nextState = runners(i).nextState) and ((states /= runners(rsi).nextState) = (states /= runners(i).nextState)) then
                                         exit;
                                     elsif rsi = i - 1 then
                                         -- Check if next state is not the same as the state that was just executed.
-                                        if not (runners(i).nextState = states(i) and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
+                                        if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                                             -- Add to pending states logic.
                                             for ps in 0 to 5 loop
                                                 -- If already exists in pending state or already exists in observed states, then exit.
@@ -658,7 +658,7 @@ if rising_edge(clk) then
                     case pendingStates(s).state is
                         when STATE_Initial =>
                             currentJobs(0) <= true;
-                            states(0) <= STATE_Initial;
+                            states <= STATE_Initial;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets(0) <= "ZZ";
                             else
@@ -668,7 +668,6 @@ if rising_edge(clk) then
                             for i in 0 to 8 loop
                                 for j in 0 to 8 loop
                                     for k in 0 to 8 loop
-                                        states(i * 81 + j * 9 + k) <= STATE_FROff;
                                         demands(i * 81 + j * 9 + k) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
                                         heats(i * 81 + j * 9 + k) <= stdLogicTypes(k);
                                         if pendingStates(s).executeOnEntry then
@@ -680,10 +679,10 @@ if rising_edge(clk) then
                                     end loop;
                                 end loop;
                             end loop;
+                            states <= STATE_FROff;
                         when STATE_FROn =>
                             for i in 0 to 8 loop
                                 for j in 0 to 8 loop
-                                    states(i * 9 + j) <= STATE_FROn;
                                     demands(i * 9 + j) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
                                     if pendingStates(s).executeOnEntry then
                                         previousRinglets(i * 9 + j) <= "ZZ";
@@ -693,6 +692,7 @@ if rising_edge(clk) then
                                     currentJobs(i * 9 + j) <= true;
                                 end loop;
                             end loop;
+                            states <= STATE_FROn;
                         when others =>
                             null;
                     end case;
