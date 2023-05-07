@@ -85,6 +85,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal initialRingletIndex: integer range 0 to 2;
     signal frOffRingletIndex: integer range 0 to 1458;
     signal frOnRingletIndex: integer range 0 to 162;
+    signal observedStatesIndex: integer range 0 to 6;
 begin
 
 run_gen: for i in 0 to 728 generate
@@ -103,7 +104,6 @@ run_gen: for i in 0 to 728 generate
 end generate run_gen;
 
 process(clk)
-variable observedStatesIndex: integer range 0 to 6 := 0;
 variable pendingStatesIndex: integer range 0 to 6 := 0;
 begin
 if rising_edge(clk) then
@@ -117,6 +117,7 @@ if rising_edge(clk) then
             initialRingletIndex <= 0;
             frOffRingletIndex <= 0;
             frOnRingletIndex <= 0;
+            observedStatesIndex <= 0;
             genTracker <= ChooseNextState;
             reset <= '0';
         when StartExecuting =>
@@ -178,15 +179,6 @@ if rising_edge(clk) then
                     end case;
                     -- When i=0, Check existing saved snapshots before writing new snapshot into buffer.
                     if i = 0 then
-                        for os in 0 to 5 loop
-                            if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
-                                exit;
-                            elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                observedStatesIndex := os + 1;
-                                exit;
-                            end if;
-                        end loop;
                         -- Check if next state is not the same as the state that was just executed.
                         if not (runners(i).nextState = states and runners(i).writeSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
                             -- Add to pending states logic.
@@ -208,21 +200,6 @@ if rising_edge(clk) then
                             end loop;
                         end if;
                     else
-                        for rsi in 0 to (i - 1) loop
-                            if (runners(rsi).readSnapshotState.executeOnEntry = runners(i).readSnapshotState.executeOnEntry) then
-                                exit;
-                            elsif rsi = i - 1 then
-                                for os in 0 to 5 loop
-                                    if observedStates(os).observed and observedStates(os).state = states and observedStates(os).executeOnEntry = runners(i).readSnapshotState.executeOnEntry then
-                                        exit;
-                                    elsif os >= observedStatesIndex and not observedStates(os).observed then
-                                        observedStates(os) <= (state => states, executeOnEntry => runners(i).readSnapshotState.executeOnEntry, observed => true);
-                                        observedStatesIndex := os + 1;
-                                        exit;
-                                    end if;
-                                end loop;
-                            end if;
-                        end loop;
                         for rsi in 0 to (i - 1) loop
                             if (runners(rsi).nextState = runners(i).nextState) and ((states /= runners(rsi).nextState) = (states /= runners(i).nextState)) then
                                 exit;
@@ -262,6 +239,8 @@ if rising_edge(clk) then
                 when others =>
                     null;
             end case;
+            observedStates(observedStatesIndex) <= (state => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry, observed => true);
+            observedStatesIndex <= observedStatesIndex + 1;
             genTracker <= ClearJobs;
         when ClearJobs =>
             reset <= '1';
