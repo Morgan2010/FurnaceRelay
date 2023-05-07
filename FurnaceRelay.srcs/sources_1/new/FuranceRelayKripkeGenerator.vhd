@@ -90,6 +90,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal frOffRingletIndex: integer range 0 to 1458;
     signal frOnRingletIndex: integer range 0 to 162;
     signal observedStatesIndex: integer range 0 to 6;
+    signal pendingStatesIndex: integer range 0 to 6;
 begin
 
 run_gen: for i in 0 to 728 generate
@@ -108,7 +109,6 @@ run_gen: for i in 0 to 728 generate
 end generate run_gen;
 
 process(clk)
-variable pendingStatesIndex: integer range 0 to 6 := 0;
 begin
 if rising_edge(clk) then
     case genTracker is
@@ -122,6 +122,7 @@ if rising_edge(clk) then
             frOffRingletIndex <= 0;
             frOnRingletIndex <= 0;
             observedStatesIndex <= 0;
+            pendingStatesIndex <= 0;
             genTracker <= ChooseNextState;
             reset <= '0';
         when StartExecuting =>
@@ -226,11 +227,14 @@ if rising_edge(clk) then
                 if ps <= maxIndex then
                     if allPendingStates(ps).observed then
                         pendingStates(pendingStatesIndex) <= allPendingStates(ps);
-                        pendingStatesIndex := pendingStatesIndex + 1;
+                        allPendingStates(ps).observed <= false;
+                        pendingStatesIndex <= pendingStatesIndex + 1;
+                        exit;
+                    elsif ps = maxIndex then
+                        genTracker <= ClearJobs;
                     end if;
                 end if;
             end loop;
-            genTracker <= ClearJobs;
         when ClearJobs =>
             allPendingStates <= (others => (
                 state => "00",
