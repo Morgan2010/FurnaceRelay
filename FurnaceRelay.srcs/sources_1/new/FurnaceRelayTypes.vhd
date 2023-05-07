@@ -63,13 +63,11 @@ package FurnaceRelayTypes is
     
     type Initial_ReadSnapshot_t is record
         executeOnEntry: boolean;
-        observed: boolean;
     end record Initial_ReadSnapshot_t;
     
     type Initial_WriteSnapshot_t is record
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
-        observed: boolean;
     end record Initial_WriteSnapshot_t;
     
     type Initial_Ringlet_t is record
@@ -84,14 +82,12 @@ package FurnaceRelayTypes is
         demand: std_logic_vector(1 downto 0);
         heat: std_logic;
         executeOnEntry: boolean;
-        observed: boolean;
     end record FROff_ReadSnapshot_t;
     
     type FROff_WriteSnapshot_t is record
         relayOn: std_logic;
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
-        observed: boolean;
     end record FROff_WriteSnapshot_t;
     
     type FROff_Ringlet_t is record
@@ -105,14 +101,12 @@ package FurnaceRelayTypes is
     type FROn_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
-        observed: boolean;
     end record FROn_ReadSnapshot_t;
     
     type FROn_WriteSnapshot_t is record
         relayOn: std_logic;
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
-        observed: boolean;
     end record FROn_WriteSnapshot_t;
     
     type FROn_Ringlet_t is record

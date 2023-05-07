@@ -139,13 +139,11 @@ if rising_edge(clk) then
                         when STATE_Initial =>
                             initialRinglets(initialRingletIndex) <= (
                                 readSnapshot => (
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
-                                    observed => true
+                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
                                 ),
                                 writeSnapshot => (
                                     nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                    observed => true
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
                                 ),
                                 observed => true
                             );
@@ -229,14 +227,12 @@ if rising_edge(clk) then
                                 readSnapshot => (
                                     demand => runners(i).readSnapshotState.demand,
                                     heat => runners(i).readSnapshotState.heat,
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
-                                    observed => true
+                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
                                 ),
                                 writeSnapshot => (
                                     relayOn => runners(i).writeSnapshotState.relayOn,
                                     nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                    observed => true
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
                                 ),
                                 observed => true
                             );
@@ -318,14 +314,12 @@ if rising_edge(clk) then
                             frOnRinglets(frOnRingletIndex) <= (
                                 readSnapshot => (
                                     demand => runners(i).readSnapshotState.demand,
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry,
-                                    observed => true
+                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
                                 ),
                                 writeSnapshot => (
                                     relayOn => runners(i).writeSnapshotState.relayOn,
                                     nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry,
-                                    observed => true
+                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
                                 ),
                                 observed => true
                             );
