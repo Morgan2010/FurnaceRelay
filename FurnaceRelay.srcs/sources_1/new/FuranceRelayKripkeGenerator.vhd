@@ -670,11 +670,10 @@ if rising_edge(clk) then
                                     for k in 0 to 8 loop
                                         demands(i * 81 + j * 9 + k) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
                                         heats(i * 81 + j * 9 + k) <= stdLogicTypes(k);
-                                        
-                                        currentJobs(i * 81 + j * 9 + k) <= true;
                                     end loop;
                                 end loop;
                             end loop;
+                            currentJobs <= (others => true);
                             states <= STATE_FROff;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
@@ -685,9 +684,9 @@ if rising_edge(clk) then
                             for i in 0 to 8 loop
                                 for j in 0 to 8 loop
                                     demands(i * 9 + j) <= (1 => stdLogicTypes(i), 0 => stdLogicTypes(j));
-                                    currentJobs(i * 9 + j) <= true;
                                 end loop;
                             end loop;
+                            currentJobs <= (0 to 80 => true, others => false);
                             states <= STATE_FROn;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
