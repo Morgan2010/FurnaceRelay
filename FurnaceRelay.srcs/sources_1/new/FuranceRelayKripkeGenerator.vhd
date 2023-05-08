@@ -47,21 +47,6 @@ end FurnaceRelayKripkeGenerator;
 architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal reset: std_logic;
     signal runners: Runners_t;
-
-    component FurnaceRelayRingletRunner is
-    port(
-        clk: in std_logic;
-        reset: in std_logic := '0';
-        state: in std_logic_vector(1 downto 0);
-        demand: in std_logic_vector(1 downto 0);
-        heat: in std_logic;
-        previousRinglet: in std_logic_vector(1 downto 0);
-        readSnapshotState: out ReadSnapshot_t;
-        writeSnapshotState: out WriteSnapshot_t;
-        nextState: out std_logic_vector(1 downto 0);
-        finished: out boolean
-    );
-    end component;
     
     constant Setup: std_logic_vector(3 downto 0) := "0000";
     constant StartExecuting: std_logic_vector(3 downto 0) := "0001";
@@ -84,9 +69,14 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal previousRinglets: std_logic_vector(1 downto 0);
     
     signal maxIndex: integer range 0 to 728;
-    signal initialRingletIndex: integer range 0 to 2;
-    signal frOffRingletIndex: integer range 0 to 1458;
-    signal frOnRingletIndex: integer range 0 to 162;
+    signal initialRinglet: Initial_Ringlet_t;
+    signal initialPendingState: ObservedState_t;
+    
+    signal frOffRingletAcc: FROff_Ringlets_t;
+    signal frOffPendingStates: FROFF_States_t;
+    
+    signal frOnRingletAcc: FROn_Ringlets_t;
+    signal frOnPendingStates: FROn_States_t;
     
     function boolToStdLogic(value: boolean) return std_logic_vector is
     begin
@@ -107,6 +97,56 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
         return to_integer(unsigned(pendingIndex(nextState => nextState, executeOnEntry => executeOnEntry)));
     end function;
     
+    function pendingIndexFromObserved(observed: ObservedState_t) return integer is
+    begin
+        return pendingIndexInteger(nextState => observed.state, executeOnEntry => observed.executeOnEntry);
+    end function;
+    
+    component FurnaceRelayRingletRunner is
+    port(
+        clk: in std_logic;
+        reset: in std_logic := '0';
+        state: in std_logic_vector(1 downto 0);
+        demand: in std_logic_vector(1 downto 0);
+        heat: in std_logic;
+        previousRinglet: in std_logic_vector(1 downto 0);
+        readSnapshotState: out ReadSnapshot_t;
+        writeSnapshotState: out WriteSnapshot_t;
+        nextState: out std_logic_vector(1 downto 0);
+        finished: out boolean
+    );
+    end component;
+    
+    component InitialKripkeGenerator is
+    port(
+        clk: in std_logic;
+        readSnapshot: in ReadSnapshot_t;
+        writeSnapshot: in WriteSnapshot_t;
+        ringlet: out Initial_Ringlet_t;
+        pendingState: out ObservedState_t
+    );
+    end component;
+    
+    component FROffKripkeGenerator is
+    port(
+        clk: in std_logic;
+        readSnapshot: in ReadSnapshot_t;
+        writeSnapshot: in WriteSnapshot_t;
+        ringlet: out FROff_Ringlet_t;
+        pendingState: out ObservedState_t
+    );
+    end component;
+    
+    component FROnKripkeGenerator is
+    port(
+        clk: in std_logic;
+        readSnapshot: in ReadSnapshot_t;
+        writeSnapshot: in WriteSnapshot_t;
+        ringlet: out FROn_Ringlet_t;
+        pendingState: out ObservedState_t
+    );
+    end component;
+    
 begin
 
 run_gen: for i in 0 to 728 generate
@@ -124,6 +164,34 @@ run_gen: for i in 0 to 728 generate
     );
 end generate run_gen;
 
+init_gen: InitialKripkeGenerator port map(
+    clk => clk,
+    readSnapshot => runners(0).readSnapshotState,
+    writeSnapshot => runners(0).writesnapshotState,
+    ringlet => initialRinglet,
+    pendingState => initialPendingState
+);
+
+froff_gen: for i in 0 to 728 generate
+    froff_inst: FROffKripkeGenerator port map(
+        clk => clk,
+        readSnapshot => runners(i).readSnapshotState,
+        writeSnapshot => runners(i).writeSnapshotState,
+        ringlet => frOffRingletAcc(i),
+        pendingState => frOffPendingStates(i)
+    );
+end generate froff_gen;
+
+fron_gen: for i in 0 to 80 generate
+    fron_inst: FROnKripkeGenerator port map(
+        clk => clk,
+        readSnapshot => runners(i).readSnapshotState,
+        writeSnapshot => runners(i).writeSnapshotState,
+        ringlet => frOnRingletAcc(i),
+        pendingState => frOnPendingStates(i)
+    );
+end generate fron_gen;
+
 process(clk)
 begin
 if rising_edge(clk) then
@@ -134,9 +202,6 @@ if rising_edge(clk) then
                 executeOnEntry => true,
                 observed => true
             );
-            initialRingletIndex <= 0;
-            frOffRingletIndex <= 0;
-            frOnRingletIndex <= 0;
             genTracker <= ChooseNextState;
             reset <= '0';
         when StartExecuting =>
@@ -152,62 +217,32 @@ if rising_edge(clk) then
             end if;
         when UpdateKripkeStates =>
             reset <= '1';
-            for i in 0 to 728 loop
-                if i <= maxIndex then
-                    allPendingStates(pendingIndexInteger(nextState => runners(i).nextState, executeOnEntry => runners(i).writeSnapshotState.executeOnEntry)) <= (
-                        state => runners(i).nextState, executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true
-                    );
-                    case states is
-                        when STATE_Initial =>
-                            initialRinglets(initialRingletIndex + i) <= (
-                                readSnapshot => (
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
-                                ),
-                                writeSnapshot => (
-                                    nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
-                                ),
-                                observed => true
-                            );
-                        when STATE_FROff =>
-                            frOffRinglets(frOffRingletIndex + i) <= (
-                                readSnapshot => (
-                                    demand => runners(i).readSnapshotState.demand,
-                                    heat => runners(i).readSnapshotState.heat,
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
-                                ),
-                                writeSnapshot => (
-                                    relayOn => runners(i).writeSnapshotState.relayOn,
-                                    nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
-                                ),
-                                observed => true
-                            );
-                        when STATE_FROn =>
-                            frOnRinglets(frOnRingletIndex + i) <= (
-                                readSnapshot => (
-                                    demand => runners(i).readSnapshotState.demand,
-                                    executeOnEntry => runners(i).readSnapshotState.executeOnEntry
-                                ),
-                                writeSnapshot => (
-                                    relayOn => runners(i).writeSnapshotState.relayOn,
-                                    nextState => runners(i).writeSnapshotState.nextState,
-                                    executeOnEntry => runners(i).writeSnapshotState.executeOnEntry
-                                ),
-                                observed => true
-                            );
-                        when others =>
-                            null;
-                    end case;
-                end if;
-            end loop;
             case states is
                 when STATE_Initial =>
-                    initialRingletIndex <= maxIndex + 1;
+                    if initialRinglet.readSnapshot.executeOnEntry then
+                        initialRinglets(0) <= initialRinglet;
+                    else
+                        initialRinglets(1) <= initialRinglet;
+                    end if;
+                    allPendingStates(pendingIndexInteger(nextState => initialRinglet.writeSnapshot.nextState, executeOnEntry => initialRinglet.writeSnapshot.executeOnEntry)) <= initialPendingState;
                 when STATE_FROff =>
-                    frOffRingletIndex <= maxIndex + 1;
+                    if frOffRingletAcc(0).readSnapshot.executeOnEntry then
+                        frOffRinglets(0 to 728) <= frOffRingletAcc(0 to 728);
+                    else
+                        frOffRinglets(729 to 1457) <= frOffRingletAcc(0 to 728);
+                    end if;
+                    for i in 0 to 728 loop
+                        allPendingStates(pendingIndexFromObserved(observed => frOffPendingStates(i))) <= frOffPendingStates(i);
+                    end loop;
                 when STATE_FROn =>
-                    frOnRingletIndex <= maxIndex + 1;
+                    if frOnRingletAcc(0).readSnapshot.executeOnEntry then
+                        frOnRinglets(0 to 80) <= frOnRingletAcc(0 to 80);
+                    else
+                        frOnRinglets(81 to 161) <= frOnRingletAcc(0 to 80);
+                    end if;
+                    for i in 0 to 80 loop
+                        allPendingStates(pendingIndexFromObserved(observed => frOnPendingStates(i))) <= frOnPendingStates(i);
+                    end loop;
                 when others =>
                     null;
             end case;

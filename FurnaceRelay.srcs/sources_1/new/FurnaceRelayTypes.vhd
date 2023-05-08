@@ -138,6 +138,9 @@ package FurnaceRelayTypes is
     type Demands_t is array(0 to 728) of std_logic_vector(1 downto 0);
     type Heats_t is array(0 to 728) of std_logic;
     
+    type FROFF_States_t is array(0 to 728) of ObservedState_t;
+    type FROn_States_t is array(0 to 80) of ObservedState_t;
+    
     
     constant STATE_Initial: std_logic_vector(1 downto 0) := "00";
     constant STATE_FROff: std_logic_vector(1 downto 0) := "01";
