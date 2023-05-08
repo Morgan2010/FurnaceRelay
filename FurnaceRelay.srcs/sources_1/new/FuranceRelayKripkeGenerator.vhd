@@ -23,6 +23,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use work.FurnaceRelayTypes.all;
 use work.PrimitiveTypes.all;
+use IEEE.numeric_std.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -71,15 +72,12 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     constant ClearJobs: std_logic_vector(3 downto 0) := "0110";
     constant Finished: std_logic_vector(3 downto 0) := "0111";
     constant WaitForRunnerInitialisation: std_logic_vector(3 downto 0) := "1000";
-    constant FilterFromObserved: std_logic_vector(3 downto 0) := "1001";
-    constant RemoveDuplicates: std_logic_vector(3 downto 0) := "1010";
-    constant UpdatePendingStates: std_logic_vector(3 downto 0) := "1011";
     
     signal genTracker: std_logic_vector(3 downto 0) := Setup;
 
     signal observedStates: AllStates_t;
     signal pendingStates: AllStates_t;
-    signal allPendingStates: States_t;
+    signal allPendingStates: AllStates_t;
     signal states: std_logic_vector(1 downto 0);
     signal demands: Demands_t;
     signal heats: Heats_t;
@@ -89,8 +87,26 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal initialRingletIndex: integer range 0 to 2;
     signal frOffRingletIndex: integer range 0 to 1458;
     signal frOnRingletIndex: integer range 0 to 162;
-    signal observedStatesIndex: integer range 0 to 6;
-    signal pendingStatesIndex: integer range 0 to 6;
+    
+    function boolToStdLogic(value: boolean) return std_logic_vector is
+    begin
+        if value then
+            return "1";
+        else
+            return "0";
+        end if;
+    end function;
+    
+    function pendingIndex(nextState: std_logic_vector(1 downto 0); executeOnEntry: boolean) return std_logic_vector is
+    begin
+        return nextState & boolToStdLogic(value => executeOnEntry);
+    end function;
+    
+    function pendingIndexInteger(nextState: std_logic_vector(1 downto 0); executeOnEntry: boolean) return integer is
+    begin
+        return to_integer(unsigned(pendingIndex(nextState => nextState, executeOnEntry => executeOnEntry)));
+    end function;
+    
 begin
 
 run_gen: for i in 0 to 728 generate
@@ -113,7 +129,7 @@ begin
 if rising_edge(clk) then
     case genTracker is
         when Setup =>
-            pendingStates(0) <= (
+            pendingStates(pendingIndexInteger(nextState => STATE_Initial, executeOnEntry => true)) <= (
                 state => STATE_Initial,
                 executeOnEntry => true,
                 observed => true
@@ -121,8 +137,6 @@ if rising_edge(clk) then
             initialRingletIndex <= 0;
             frOffRingletIndex <= 0;
             frOnRingletIndex <= 0;
-            observedStatesIndex <= 0;
-            pendingStatesIndex <= 0;
             genTracker <= ChooseNextState;
             reset <= '0';
         when StartExecuting =>
@@ -140,7 +154,9 @@ if rising_edge(clk) then
             reset <= '1';
             for i in 0 to 728 loop
                 if i <= maxIndex then
-                    allPendingStates(i) <= (state => runners(i).nextState, executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true);
+                    allPendingStates(pendingIndexInteger(nextState => runners(i).nextState, executeOnEntry => runners(i).writeSnapshotState.executeOnEntry)) <= (
+                        state => runners(i).nextState, executeOnEntry => runners(i).writeSnapshotState.executeOnEntry, observed => true
+                    );
                     case states is
                         when STATE_Initial =>
                             initialRinglets(initialRingletIndex + i) <= (
@@ -195,61 +211,18 @@ if rising_edge(clk) then
                 when others =>
                     null;
             end case;
-            observedStates(observedStatesIndex) <= (state => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry, observed => true);
-            observedStatesIndex <= observedStatesIndex + 1;
-            genTracker <= FilterFromObserved;
-        when FilterFromObserved =>
-            reset <= '1';
-            for ps in 0 to 728 loop
-                if ps <= maxIndex then
-                    for os in 0 to 5 loop
-                        if allPendingStates(ps) = observedStates(os) then
-                            allPendingStates(ps).observed <= false;
-                            exit;
-                        end if;
-                    end loop;
-                end if;
-            end loop;
-            genTracker <= RemoveDuplicates;
-        when RemoveDuplicates =>
-            for ps in 1 to 728 loop
-                if ps <= maxIndex then
-                    for pps in 0 to (ps - 1) loop
-                        if allPendingStates(ps) = allPendingStates(pps) then
-                            allPendingStates(ps).observed <= false;
-                        end if;
-                    end loop;
-                end if;
-            end loop;
-            genTracker <= UpdatePendingStates;
-        when UpdatePendingStates =>
-            for ps in 0 to 728 loop
-                if ps <= maxIndex then
-                    if allPendingStates(ps).observed then
-                        pendingStates(pendingStatesIndex) <= allPendingStates(ps);
-                        allPendingStates(ps).observed <= false;
-                        pendingStatesIndex <= pendingStatesIndex + 1;
-                        exit;
-                    elsif ps = maxIndex then
-                        genTracker <= ClearJobs;
-                    end if;
-                end if;
-            end loop;
+            observedStates(pendingIndexInteger(nextState => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry)) <= (
+                state => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry, observed => true
+            );
+            pendingStates(pendingIndexInteger(nextState => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry)).observed <= false;
+            genTracker <= ClearJobs;
         when ClearJobs =>
-            allPendingStates <= (others => (
-                state => "00",
-                executeOnEntry => false,
-                observed => false
-            ));
             reset <= '1';
-            for j in 0 to 5 loop
-                for p in 0 to 5 loop
-                    if pendingStates(p).observed then
-                        if pendingStates(p) = observedStates(j) then
-                            pendingStates(p).observed <= false;
-                        end if;
-                    end if;
-                end loop;
+            for allPendingStatesIndex in 0 to 5 loop
+                if allPendingStates(allPendingStatesIndex).observed and not observedStates(allPendingStatesIndex).observed then
+                    pendingStates(allPendingStatesIndex) <= allPendingStates(allPendingStatesIndex);
+                    allPendingStates(allPendingStatesIndex).observed <= false;
+                end if;
             end loop;
             genTracker <= ChooseNextState;
         when ChooseNextState =>
