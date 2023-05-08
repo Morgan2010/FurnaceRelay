@@ -67,8 +67,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal demands: Demands_t;
     signal heats: Heats_t;
     signal previousRinglets: std_logic_vector(1 downto 0);
-    
-    signal maxIndex: integer range 0 to 728;
+
     signal initialRinglet: Initial_Ringlet_t;
     signal initialPendingState: ObservedState_t;
     
@@ -267,7 +266,6 @@ if rising_edge(clk) then
                     case pendingStates(s).state is
                         when STATE_Initial =>
                             states <= STATE_Initial;
-                            maxIndex <= 0;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
                             else
@@ -283,7 +281,6 @@ if rising_edge(clk) then
                                 end loop;
                             end loop;
                             states <= STATE_FROff;
-                            maxIndex <= 728;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
                             else
@@ -296,7 +293,6 @@ if rising_edge(clk) then
                                 end loop;
                             end loop;
                             states <= STATE_FROn;
-                            maxIndex <= 80;
                             if pendingStates(s).executeOnEntry then
                                 previousRinglets <= "ZZ";
                             else
