@@ -39,6 +39,7 @@ port(
     state: in std_logic_vector(1 downto 0) := "00";
     demand: in std_logic_vector(1 downto 0) := "00";
     heat: in std_logic := '0';
+    relayOn: in std_logic;
     previousRinglet: in std_logic_vector(1 downto 0) := "ZZ";
     readSnapshotState: out ReadSnapshot_t;
     writeSnapshotState: out WriteSnapshot_t;
@@ -58,6 +59,8 @@ architecture Behavioral of FurnaceRelayRingletRunner is
         relayOn => '0',
         fr_demand => "00",
         fr_heat => '0',
+        fr_relayOn => 'U',
+        fr_relayOnIn => 'U',
         currentStateIn => "00",
         currentStateOut => "00",
         previousRingletIn => "00",
@@ -96,6 +99,8 @@ architecture Behavioral of FurnaceRelayRingletRunner is
         relayOn: out std_logic;
         fr_demand: out std_logic_vector(1 downto 0);
         fr_heat: out std_logic;
+        fr_relayOn: out std_logic;
+        fr_relayOnIn: in std_logic;
         reset: in std_logic;
         goalInternalState: in std_logic_vector(2 downto 0);
         finished: out boolean
@@ -119,6 +124,8 @@ run_inst: FurnaceRelayMachineRunner port map(
     relayOn => machine.relayOn,
     fr_demand => machine.fr_demand,
     fr_heat => machine.fr_heat,
+    fr_relayOn => machine.fr_relayOn,
+    fr_relayOnIn => machine.fr_relayOnIn,
     reset => machine.reset,
     goalInternalState => machine.goalInternalState,
     finished => machine.finished
@@ -136,6 +143,7 @@ case tracker is
                 demand => demand,
                 heat => heat,
                 state => state,
+                fr_relayOn => relayOn,
                 executeOnEntry => previousRinglet /= state
             );
             finished <= false;
@@ -148,6 +156,7 @@ case tracker is
             machine.reset <= '0';
             machine.goalInternalState <= WriteSnapshot;
             machine.previousRingletIn <= previousRinglet;
+            machine.fr_relayOnIn <= relayOn;
         end if;
         currentState <= state;
     when WaitForMachineStart =>
@@ -159,7 +168,7 @@ case tracker is
             writeSnapshotState <= (
                 demand => machine.fr_demand,
                 heat => machine.fr_heat,
-                relayOn => machine.relayOn,
+                relayOn => machine.fr_relayOn,
                 state => currentState,
                 nextState => machine.currentStateOut,
                 executeOnEntry => machine.currentStateOut /= currentState

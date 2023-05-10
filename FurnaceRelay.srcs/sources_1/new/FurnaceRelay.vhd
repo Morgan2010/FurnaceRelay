@@ -10,6 +10,8 @@ entity FurnaceRelay is
         EXTERNAL_RelayOn: out std_logic := '0';
         FurnaceRelay_demand: out std_logic_vector(1 downto 0);
         FurnaceRelay_heat: out std_logic;
+        FurnaceRelay_relayOn: out std_logic;
+        FurnaceRelay_relayOnIn: in std_logic;
         FurnaceRelay_currentStateIn: in std_logic_vector(1 downto 0);
         FurnaceRelay_previousRingletIn: in std_logic_vector(1 downto 0);
         FurnaceRelay_internalStateIn: in std_logic_vector(2 downto 0);
@@ -53,6 +55,7 @@ begin
     begin
         if (rising_edge(clk)) then
             if reset = '1' then
+                FurnaceRelay_relayOn <= RelayOn;
                 case internalState is
                     when CheckTransition =>
                         case currentState is
@@ -159,11 +162,13 @@ begin
                     FurnaceRelay_previousRingletOut <= FurnaceRelay_previousRingletIn;
                     FurnaceRelay_internalStateOut <= FurnaceRelay_internalStateIn;
                     FurnaceRelay_targetStateOut <= FurnaceRelay_targetStateIn;
+                    relayOn <= FurnaceRelay_relayOnIn;
                 else
                     FurnaceRelay_currentStateOut <= currentState;
                     FurnaceRelay_previousRingletOut <= previousRinglet;
                     FurnaceRelay_internalStateOut <= internalState;
                     FurnaceRelay_targetStateOut <= targetState;
+                    FurnaceRelay_relayOn <= RelayOn;
                 end if;
             end if;
         end if;

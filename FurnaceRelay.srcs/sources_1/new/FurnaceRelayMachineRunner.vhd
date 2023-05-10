@@ -47,6 +47,8 @@ port (
     relayOn: out std_logic;
     fr_demand: out std_logic_vector(1 downto 0);
     fr_heat: out std_logic;
+    fr_relayOn: out std_logic;
+    fr_relayOnIn: in std_logic;
     reset: in std_logic;
     goalInternalState: in std_logic_vector(2 downto 0);
     finished: out boolean := true
@@ -73,6 +75,8 @@ architecture Behavioral of FurnaceRelayMachineRunner is
             EXTERNAL_RelayOn: out std_logic := '0';
             FurnaceRelay_demand: out std_logic_vector(1 downto 0);
             FurnaceRelay_heat: out std_logic;
+            FurnaceRelay_relayOn: out std_logic;
+            FurnaceRelay_relayOnIn: in std_logic;
             FurnaceRelay_currentStateIn: in std_logic_vector(1 downto 0);
             FurnaceRelay_previousRingletIn: in std_logic_vector(1 downto 0);
             FurnaceRelay_internalStateIn: in std_logic_vector(2 downto 0);
@@ -95,6 +99,8 @@ begin
         EXTERNAL_RelayOn => relayOn,
         FurnaceRelay_demand => fr_demand,
         FurnaceRelay_heat => fr_heat,
+        FurnaceRelay_relayOn => fr_relayOn,
+        FurnaceRelay_relayOnIn => fr_relayOnIn,
         FurnaceRelay_currentStateIn => currentStateIn,
         FurnaceRelay_previousRingletIn => previousRingletIn,
         FurnaceRelay_internalStateIn => internalStateIn,

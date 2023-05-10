@@ -27,6 +27,7 @@ package FurnaceRelayTypes is
     type ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
         heat: std_logic;
+        fr_relayOn: std_logic;
         state: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
     end record ReadSnapshot_t;
@@ -46,6 +47,8 @@ package FurnaceRelayTypes is
         relayOn: std_logic;
         fr_demand: std_logic_vector(1 downto 0);
         fr_heat: std_logic;
+        fr_relayOn: std_logic;
+        fr_relayOnIn: std_logic;
         currentStateIn: std_logic_vector(1 downto 0);
         currentStateOut: std_logic_vector(1 downto 0);
         previousRingletIn: std_logic_vector(1 downto 0);
@@ -62,10 +65,12 @@ package FurnaceRelayTypes is
     end record TotalSnapshot_t;
     
     type Initial_ReadSnapshot_t is record
+        fr_relayOn: std_logic;
         executeOnEntry: boolean;
     end record Initial_ReadSnapshot_t;
     
     type Initial_WriteSnapshot_t is record
+        fr_relayOn: std_logic;
         nextState: std_logic_vector(1 downto 0);
         executeOnEntry: boolean;
     end record Initial_WriteSnapshot_t;
@@ -76,11 +81,12 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record Initial_Ringlet_t;
     
-    type Initial_Ringlets_t is array (0 to 1) of Initial_Ringlet_t;
+    type Initial_Ringlets_t is array (0 to 17) of Initial_Ringlet_t;
     
     type FROff_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
         heat: std_logic;
+        fr_relayOn: std_logic;
         executeOnEntry: boolean;
     end record FROff_ReadSnapshot_t;
     
@@ -96,10 +102,11 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record FROff_Ringlet_t;
     
-    type FROff_Ringlets_t is array (0 to 1457) of FROff_Ringlet_t;
+    type FROff_Ringlets_t is array (0 to 13121) of FROff_Ringlet_t;
     
     type FROn_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
+        fr_relayOn: std_logic;
         executeOnEntry: boolean;
     end record FROn_ReadSnapshot_t;
     
@@ -115,7 +122,7 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record FROn_Ringlet_t;
     
-    type FROn_Ringlets_t is array (0 to 161) of FROn_Ringlet_t;
+    type FROn_Ringlets_t is array (0 to 1457) of FROn_Ringlet_t;
     
     type RunnerParameters_t is record
         readSnapshotState: ReadSnapshot_t;
@@ -130,11 +137,12 @@ package FurnaceRelayTypes is
     
     type ObservedState_t is record
         state: std_logic_vector(1 downto 0);
+        fr_relayOn: std_logic;
         executeOnEntry: boolean;
         observed: boolean;
     end record ObservedState_t;
     
-    type AllStates_t is array(0 to 5) of ObservedState_t;
+    type AllStates_t is array(0 to 53) of ObservedState_t;
     type Demands_t is array(0 to 728) of std_logic_vector(1 downto 0);
     type Heats_t is array(0 to 728) of std_logic;
     

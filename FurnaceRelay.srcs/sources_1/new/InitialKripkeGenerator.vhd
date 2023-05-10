@@ -51,9 +51,11 @@ begin
 if rising_edge(clk) then
     ringlet <= (
         readSnapshot => (
+            fr_relayOn => readSnapshot.fr_relayOn,
             executeOnEntry => readSnapshot.executeOnEntry
         ),
         writeSnapshot => (
+            fr_relayOn => writeSnapshot.relayOn,
             nextState => writeSnapshot.nextState,
             executeOnEntry => writeSnapshot.executeOnEntry
         ),
@@ -61,6 +63,7 @@ if rising_edge(clk) then
     );
     pendingState <= (
         state => writeSnapshot.nextState,
+        fr_relayOn => writeSnapshot.relayOn,
         executeOnEntry => writeSnapshot.executeOnEntry,
         observed => true
     );

@@ -66,6 +66,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     signal states: std_logic_vector(1 downto 0);
     signal demands: Demands_t;
     signal heats: Heats_t;
+    signal relayOns: Heats_t;
     signal previousRinglets: std_logic_vector(1 downto 0);
 
     signal initialRinglet: Initial_Ringlet_t;
@@ -86,19 +87,43 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
         end if;
     end function;
     
-    function pendingIndex(nextState: std_logic_vector(1 downto 0); executeOnEntry: boolean) return std_logic_vector is
+    function stdLogicToInteger(value: std_logic) return integer is
     begin
-        return nextState & boolToStdLogic(value => executeOnEntry);
+        case value is
+            when 'U' =>
+                return 0;
+            when 'X' =>
+                return 1;
+            when '0' =>
+                return 2;
+            when '1' =>
+                return 3;
+            when 'Z' =>
+                return 4;
+            when 'W' =>
+                return 5;
+            when 'L' =>
+                return 6;
+            when 'H' =>
+                return 7;
+            when '-' =>
+                return 8;
+        end case;
     end function;
     
-    function pendingIndexInteger(nextState: std_logic_vector(1 downto 0); executeOnEntry: boolean) return integer is
+    function pendingIndex(nextState: std_logic_vector(1 downto 0); relayOn: std_logic; executeOnEntry: boolean) return std_logic_vector is
     begin
-        return to_integer(unsigned(pendingIndex(nextState => nextState, executeOnEntry => executeOnEntry)));
+        return std_logic_vector(to_unsigned(stdLogicToInteger(value => relayOn), 4)) & nextState & boolToStdLogic(value => executeOnEntry);
+    end function;
+    
+    function pendingIndexInteger(nextState: std_logic_vector(1 downto 0); relayOn: std_logic; executeOnEntry: boolean) return integer is
+    begin
+        return to_integer(unsigned(pendingIndex(nextState => nextState, relayOn => relayOn, executeOnEntry => executeOnEntry)));
     end function;
     
     function pendingIndexFromObserved(observed: ObservedState_t) return integer is
     begin
-        return pendingIndexInteger(nextState => observed.state, executeOnEntry => observed.executeOnEntry);
+        return pendingIndexInteger(nextState => observed.state, relayOn => observed.fr_relayOn, executeOnEntry => observed.executeOnEntry);
     end function;
     
     component FurnaceRelayRingletRunner is
@@ -108,6 +133,7 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
         state: in std_logic_vector(1 downto 0);
         demand: in std_logic_vector(1 downto 0);
         heat: in std_logic;
+        relayOn: in std_logic;
         previousRinglet: in std_logic_vector(1 downto 0);
         readSnapshotState: out ReadSnapshot_t;
         writeSnapshotState: out WriteSnapshot_t;
@@ -155,6 +181,7 @@ run_gen: for i in 0 to 728 generate
         state => states,
         demand => demands(i),
         heat => heats(i),
+        relayOn => relayOns(i),
         previousRinglet => previousRinglets,
         readSnapshotState => runners(i).readSnapshotState,
         writeSnapshotState => runners(i).writeSnapshotState,
@@ -196,8 +223,9 @@ begin
 if rising_edge(clk) then
     case genTracker is
         when Setup =>
-            pendingStates(pendingIndexInteger(nextState => STATE_Initial, executeOnEntry => true)) <= (
+            pendingStates(pendingIndexInteger(nextState => STATE_Initial, relayOn => 'U', executeOnEntry => true)) <= (
                 state => STATE_Initial,
+                fr_relayOn => 'U',
                 executeOnEntry => true,
                 observed => true
             );
@@ -223,7 +251,7 @@ if rising_edge(clk) then
                     else
                         initialRinglets(1) <= initialRinglet;
                     end if;
-                    allPendingStates(pendingIndexInteger(nextState => initialRinglet.writeSnapshot.nextState, executeOnEntry => initialRinglet.writeSnapshot.executeOnEntry)) <= initialPendingState;
+                    allPendingStates(pendingIndexInteger(nextState => initialRinglet.writeSnapshot.nextState, relayOn => initialRinglet.writeSnapshot.fr_relayOn, executeOnEntry => initialRinglet.writeSnapshot.executeOnEntry)) <= initialPendingState;
                 when STATE_FROff =>
                     if frOffRingletAcc(0).readSnapshot.executeOnEntry then
                         frOffRinglets(0 to 728) <= frOffRingletAcc(0 to 728);
@@ -245,14 +273,14 @@ if rising_edge(clk) then
                 when others =>
                     null;
             end case;
-            observedStates(pendingIndexInteger(nextState => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry)) <= (
-                state => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry, observed => true
+            observedStates(pendingIndexInteger(nextState => states, relayOn => runners(0).readSnapshotState.fr_relayOn, executeOnEntry => runners(0).readSnapshotState.executeOnEntry)) <= (
+                state => states, fr_relayOn => runners(0).readSnapshotState.fr_relayOn, executeOnEntry => runners(0).readSnapshotState.executeOnEntry, observed => true
             );
-            pendingStates(pendingIndexInteger(nextState => states, executeOnEntry => runners(0).readSnapshotState.executeOnEntry)).observed <= false;
+            pendingStates(pendingIndexInteger(nextState => states, relayOn => runners(0).readSnapshotState.fr_relayOn, executeOnEntry => runners(0).readSnapshotState.executeOnEntry)).observed <= false;
             genTracker <= ClearJobs;
         when ClearJobs =>
             reset <= '1';
-            for allPendingStatesIndex in 0 to 5 loop
+            for allPendingStatesIndex in 0 to 53 loop
                 if allPendingStates(allPendingStatesIndex).observed and not observedStates(allPendingStatesIndex).observed then
                     pendingStates(allPendingStatesIndex) <= allPendingStates(allPendingStatesIndex);
                     allPendingStates(allPendingStatesIndex).observed <= false;
@@ -261,7 +289,7 @@ if rising_edge(clk) then
             genTracker <= ChooseNextState;
         when ChooseNextState =>
             reset <= '0';
-            for s in 0 to 5 loop
+            for s in 0 to 53 loop
                 if pendingStates(s).observed then
                     case pendingStates(s).state is
                         when STATE_Initial =>
@@ -301,6 +329,7 @@ if rising_edge(clk) then
                         when others =>
                             null;
                     end case;
+                    relayOns <= (others => pendingStates(s).fr_relayOn);
                     genTracker <= WaitForRunnerInitialisation;
                     exit;
                 elsif s = 5 then

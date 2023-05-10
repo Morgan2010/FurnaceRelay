@@ -53,6 +53,7 @@ if rising_edge(clk) then
         readSnapshot => (
             demand => readSnapshot.demand,
             heat => readSnapshot.heat,
+            fr_relayOn => readSnapshot.fr_relayOn,
             executeOnEntry => readSnapshot.executeOnEntry
         ),
         writeSnapshot => (
@@ -64,6 +65,7 @@ if rising_edge(clk) then
     );
     pendingState <= (
         state => writeSnapshot.nextState,
+        fr_relayOn => writeSnapshot.relayOn,
         executeOnEntry => writeSnapshot.executeOnEntry,
         observed => true
     );
