@@ -81,7 +81,7 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record Initial_Ringlet_t;
     
-    type Initial_Ringlets_t is array (0 to 17) of Initial_Ringlet_t;
+    type Initial_Ringlets_t is array (0 to 1) of Initial_Ringlet_t;
     
     type FROff_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
@@ -102,7 +102,7 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record FROff_Ringlet_t;
     
-    type FROff_Ringlets_t is array (0 to 13121) of FROff_Ringlet_t;
+    type FROff_Ringlets_t is array (0 to 4373) of FROff_Ringlet_t;
     
     type FROn_ReadSnapshot_t is record
         demand: std_logic_vector(1 downto 0);
@@ -122,7 +122,7 @@ package FurnaceRelayTypes is
         observed: boolean;
     end record FROn_Ringlet_t;
     
-    type FROn_Ringlets_t is array (0 to 1457) of FROn_Ringlet_t;
+    type FROn_Ringlets_t is array (0 to 161) of FROn_Ringlet_t;
     
     type RunnerParameters_t is record
         readSnapshotState: ReadSnapshot_t;

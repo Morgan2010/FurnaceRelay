@@ -90,30 +90,20 @@ architecture Behavioral of FurnaceRelayKripkeGenerator is
     function stdLogicToInteger(value: std_logic) return integer is
     begin
         case value is
-            when 'U' =>
+            when 'U' | 'W' | 'X' | '-' =>
                 return 0;
-            when 'X' =>
+            when '0' | 'L' =>
                 return 1;
-            when '0' =>
+            when '1' | 'H' =>
                 return 2;
-            when '1' =>
-                return 3;
             when 'Z' =>
-                return 4;
-            when 'W' =>
-                return 5;
-            when 'L' =>
-                return 6;
-            when 'H' =>
-                return 7;
-            when '-' =>
-                return 8;
+                return 3;
         end case;
     end function;
     
     function pendingIndex(nextState: std_logic_vector(1 downto 0); relayOn: std_logic; executeOnEntry: boolean) return std_logic_vector is
     begin
-        return std_logic_vector(to_unsigned(stdLogicToInteger(value => relayOn), 4)) & nextState & boolToStdLogic(value => executeOnEntry);
+        return std_logic_vector(to_unsigned(stdLogicToInteger(value => relayOn), 2)) & nextState & boolToStdLogic(value => executeOnEntry);
     end function;
     
     function pendingIndexInteger(nextState: std_logic_vector(1 downto 0); relayOn: std_logic; executeOnEntry: boolean) return integer is
@@ -253,10 +243,18 @@ if rising_edge(clk) then
                     end if;
                     allPendingStates(pendingIndexInteger(nextState => initialRinglet.writeSnapshot.nextState, relayOn => initialRinglet.writeSnapshot.fr_relayOn, executeOnEntry => initialRinglet.writeSnapshot.executeOnEntry)) <= initialPendingState;
                 when STATE_FROff =>
-                    if frOffRingletAcc(0).readSnapshot.executeOnEntry then
+                    if frOffRingletAcc(0).readSnapshot.executeOnEntry and frOffRingletAcc(0).readSnapshot.fr_relayOn = '1' then
                         frOffRinglets(0 to 728) <= frOffRingletAcc(0 to 728);
-                    else
+                    elsif frOffRingletAcc(0).readSnapshot.executeOnEntry and frOffRingletAcc(0).readSnapshot.fr_relayOn = '0' then
                         frOffRinglets(729 to 1457) <= frOffRingletAcc(0 to 728);
+                    elsif frOffRingletAcc(0).readSnapshot.executeOnEntry and frOffRingletAcc(0).readSnapshot.fr_relayOn = 'U' then
+                        frOffRinglets(1458 to 2186) <= frOffRingletAcc(0 to 728);
+                    elsif (not frOffRingletAcc(0).readSnapshot.executeOnEntry) and frOffRingletAcc(0).readSnapshot.fr_relayOn = '1' then
+                        frOffRinglets(2187 to 2915) <= frOffRingletAcc(0 to 728);
+                    elsif (not frOffRingletAcc(0).readSnapshot.executeOnEntry) and frOffRingletAcc(0).readSnapshot.fr_relayOn = '0' then
+                        frOffRinglets(2916 to 3644) <= frOffRingletAcc(0 to 728);
+                    elsif (not frOffRingletAcc(0).readSnapshot.executeOnEntry) and frOffRingletAcc(0).readSnapshot.fr_relayOn = 'U' then
+                        frOffRinglets(3645 to 4373) <= frOffRingletAcc(0 to 728);
                     end if;
                     for i in 0 to 728 loop
                         allPendingStates(pendingIndexFromObserved(observed => frOffPendingStates(i))) <= frOffPendingStates(i);
